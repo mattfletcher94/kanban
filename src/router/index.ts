@@ -1,8 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import PageBoard from '../pages/PageBoard.vue'
 
 export default createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory('/'),
   routes: [
     {
       path: '/',

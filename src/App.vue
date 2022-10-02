@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
 </script>
 
 <template>
   <main class="relative block w-full min-h-screen">
-    <RouterView v-slot="{ Component }">
+    <RouterView v-slot="{ Component }" :key="route.fullPath">
       <Transition name="page" mode="out-in">
         <component :is="Component" />
       </Transition>

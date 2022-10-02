@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed, onBeforeMount, ref, unref, watch } from 'vue'
+import { computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import Sortable from 'sortablejs'
 import SmoothReflow from '../components/SmoothReflow.vue'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
@@ -11,14 +12,13 @@ import IconAdd from '../components/Icons/IconAdd.vue'
 import IconConfig from '../components/Icons/IconConfig.vue'
 import Dropdown from '../components/Dropdowns/Dropdown.vue'
 import DropdownOption from '../components/Dropdowns/DropdownOption.vue'
-import Popover from '../components/Popovers/Popover.vue'
 import PopoverEditBoard from '../components/Popovers/PopoverEditBoard.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import { useBoardsStore } from './../stores/boards'
-import type { BoardCreate, BoardUpdate, CardCreate, Column, ColumnCreate, ColumnUpdate, Theme } from './../stores/boards'
+import type { BoardCreate, BoardUpdate, CardCreate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,10 +28,14 @@ const board = computed(() => boardsStore.getBoardById((route.params.boardId as s
 const theme = computed(() => boardsStore.getThemeById(board.value?.themeId || ''))
 const columns = computed(() => boardsStore.getBoardColumns(board.value?.id || '').sort((a, b) => a.order - b.order))
 
+const columnRef = ref<HTMLElement>()
+const cardRefs = ref<HTMLElement[]>([])
 const isCreateDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
 const createdCardColumnCandidate = ref<string | null>(null)
+const columnsSortableInstance = ref<Sortable>()
+const cardSortableInstances = ref<Map<string, Sortable>>(new Map())
 
 const handleCreateBoard = (board: BoardCreate) => {
   const created = boardsStore.createBoard(board)
@@ -79,13 +83,112 @@ const handleDeleteColumn = (columnId: string) => {
 }
 
 const handleCreateCard = (card: CardCreate) => {
+  card.order = boardsStore.getColumnCards(card.columnId).length
   boardsStore.createCard(card)
   createdCardColumnCandidate.value = null
 }
 
-onBeforeMount(() => {
-  if (route.params.boardId)
+const initSortableCards = () => {
+  // Destroy all existing sortable instances
+  cardSortableInstances.value.forEach(sortable => sortable.destroy())
+  cardSortableInstances.value.clear()
+
+  // Init new sortable instances
+  cardRefs.value.forEach((ref) => {
+    const columnId = ref?.dataset.columnId
+    if (!columnId)
+      return
+    cardSortableInstances.value.set(columnId, Sortable.create(ref, {
+      group: 'cards',
+      animation: 300,
+      dataIdAttr: 'data-card-id',
+      chosenClass: 'card--chosen',
+      onEnd(this: Sortable, evt) {
+        if (!board.value)
+          return
+
+        const oldColumnId = evt.from.dataset.columnId || ''
+        const newColumnId = evt.to.dataset.columnId || ''
+
+        // Update orders in the same column
+        if (oldColumnId === newColumnId) {
+          const orders = this.toArray()
+          const columnCards = boardsStore.getColumnCards(oldColumnId)
+          columnCards.forEach((card, i) => {
+            boardsStore.updateCard({
+              id: card.id,
+              columnId: card.columnId,
+              order: orders.indexOf(card.id),
+            })
+          })
+        }
+
+        // Card has changed column
+        else {
+          const newColumnSortableInstance = cardSortableInstances.value.get(newColumnId)
+          if (!newColumnSortableInstance)
+            return
+          const card = boardsStore.getCardById(evt.item.dataset.cardId || '')
+          if (!card)
+            return
+          boardsStore.updateCard({
+            id: card.id,
+            columnId: newColumnId,
+          })
+
+          const orders = newColumnSortableInstance.toArray()
+          const columnCards = boardsStore.getColumnCards(newColumnId)
+          columnCards.forEach((c) => {
+            boardsStore.updateCard({
+              id: c.id,
+              columnId: newColumnId,
+              order: orders.indexOf(c.id),
+            })
+          })
+        }
+      },
+    }))
+  })
+}
+
+const initSortableColumns = () => {
+  if (!columnRef.value)
     return
+  // Destroy all existing sortable instances
+  columnsSortableInstance.value?.destroy()
+
+  // Init sortable
+  columnsSortableInstance.value = Sortable.create(columnRef.value, {
+    group: 'columns',
+    animation: 300,
+    draggable: '.column',
+    handle: '.column__handle',
+    dataIdAttr: 'data-column-id',
+    chosenClass: 'column--chosen',
+    direction: 'horizontal',
+    scrollFn(offsetX, offsetY, originalEvent, touchEvt, hoverTargetEl) {
+      console.log(offsetX, offsetY, originalEvent, touchEvt, hoverTargetEl)
+    },
+    onEnd(this: Sortable, evt) {
+      const orders = this.toArray()
+      const columns = boardsStore.getBoardColumns(board.value?.id || '')
+      columns.forEach((col) => {
+        boardsStore.updateColumn({
+          id: col.id,
+          boardId: col.boardId,
+          order: orders.indexOf(col.id),
+        })
+      })
+    },
+  })
+}
+
+onMounted(() => {
+  if (route.params.boardId) {
+    nextTick().then(() => initSortableColumns())
+    nextTick().then(() => initSortableCards())
+    return
+  }
 
   const selectedBoard = boardsStore.getBoardById(boardsStore.selectedBoardId)
   if (selectedBoard) {
@@ -97,11 +200,16 @@ onBeforeMount(() => {
   router.push(`/boards/${nextBoard.id}`)
 })
 
-watch(() => route.params, (params) => {
-  if (!params.boardId)
-    return
+onBeforeUnmount(() => {
+  columnsSortableInstance.value?.destroy()
+  cardSortableInstances.value.forEach(sortable => sortable.destroy())
+  cardSortableInstances.value.clear()
+})
 
-  boardsStore.selectedBoardId = params.boardId as string
+// Watch columns length and re-init sortable
+watch(() => columns.value.length, () => {
+  nextTick().then(() => initSortableColumns())
+  nextTick().then(() => initSortableCards())
 })
 </script>
 
@@ -109,14 +217,14 @@ watch(() => route.params, (params) => {
   <div v-if="board" class="relative block w-full h-screen overflow-hidden text-slate-700">
 
     <!-- Theme bg -->
-    <transition mode="in-out" name="background">
+    <Transition mode="in-out" name="background">
       <div
         v-if="theme"
         :key="theme?.id"
         class="absolute inset-0 bg-cover bg-no-repeat bg-center"
         :style="{ backgroundImage: `url(${theme?.image})` }"
       />
-    </transition>
+    </Transition>
 
     <!-- Header -->
     <header class="relative block w-full text-base z-20 bg-white shadow-md">
@@ -133,11 +241,11 @@ watch(() => route.params, (params) => {
             <Dropdown width="100%">
               <template #trigger>
                 <button class="btn btn--gray flex w-48 items-center justify-between font-bold rounded-md h-9">
-                  <transition mode="out-in" name="slide-fade">
+                  <Transition mode="out-in" name="slide-fade">
                     <div :key="board.title" class="tracking-wide min-w-0 truncate">
                       {{ board.title }}
                     </div>
-                  </transition>
+                  </Transition>
                   <div>
                     <IconChevonDown class="w-4 h-4" />
                   </div>
@@ -216,120 +324,133 @@ watch(() => route.params, (params) => {
     </header>
 
     <!-- Board area -->
-    <PerfectScrollbar
+    <div
       :key="board.id"
       :style="{
         height: 'calc(100vh - 4rem)',
+        width: '100%',
+        overflowX: 'auto',
       }"
     >
-      <div class="relative block w-full" style="height:calc(100vh - 4rem)">
-        <div class="relative block w-auto h-full p-6 whitespace-nowrap text-[0px]">
 
-          <!-- Columns -->
-          <TransitionGroup
-            name="columns"
-            class="columns"
-            tag="div"
-          >
-            <div v-for="column in columns" :key="column.id" class="relative inline-block align-top text-base w-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md mr-6">
-              <SmoothReflow>
-                <div class="block w-full">
+      <!-- Columns -->
+      <div
+        ref="columnRef"
+        class="columns flex flex-nowrap items-start w-auto p-6 gap-6"
+      >
+        <div
+          v-for="column in columns"
+          :id="column.id"
+          :key="column.id"
+          :data-column-id="column.id"
+          class="column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+        >
+          <SmoothReflow>
+            <div class="block w-full">
 
-                  <!-- Column title -->
-                  <div class="flex w-full items-center justify-between font-bold gap-4 px-4 h-12 border-b border-b-slate-200 text-slate-700">
-                    <div class="cursor-grab">
-                      <IconHandle class="w-4 h-4" />
-                    </div>
-                    <div>
-                      <transition mode="out-in" name="slide-fade">
-                        <h3
-                          :key="column.title"
-                          class="tracking-wide min-w-0 truncate text-sm"
-                        >
-                          {{ column.title }}
-                        </h3>
-                      </transition>
-                    </div>
-                    <div class="ml-auto">
+              <!-- Column title -->
+              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 h-12 border-b border-b-slate-200 text-slate-700">
+                <div
+                  class="column__handle cursor-grab"
+                >
+                  <IconHandle class="w-4 h-4" />
+                </div>
+                <div>
+                  <Transition mode="out-in" name="slide-fade">
+                    <h3
+                      :key="column.title"
+                      class="tracking-wide min-w-0 truncate text-sm"
+                    >
+                      {{ column.title }}
+                    </h3>
+                  </Transition>
+                </div>
+                <div class="ml-auto">
+                  <button
+                    v-tooltip="{ content: 'Add Card' }"
+                    class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
+                    @click="() => createdCardColumnCandidate = column.id"
+                  >
+                    <IconAdd class="w-4 h-4" />
+                  </button>
+                </div>
+                <div>
+                  <Dropdown
+                    width="180px"
+                    anchor="right"
+                  >
+                    <template #trigger>
                       <button
-                        v-tooltip="{ content: 'Add Card' }"
+                        v-tooltip="{ content: 'Options' }"
                         class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
-                        @click="() => createdCardColumnCandidate = column.id"
                       >
-                        <IconAdd class="w-4 h-4" />
+                        <IconChevonDown class="w-4 h-4" />
                       </button>
-                    </div>
-                    <div>
-                      <Dropdown
-                        width="180px"
-                        anchor="right"
+                    </template>
+                    <template #options>
+                      <DropdownOption
+                        @click="() => editColumnCandidate = column"
                       >
-                        <template #trigger>
-                          <button
-                            v-tooltip="{ content: 'Options' }"
-                            class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
-                          >
-                            <IconChevonDown class="w-4 h-4" />
-                          </button>
-                        </template>
-                        <template #options>
-                          <DropdownOption
-                            @click="() => editColumnCandidate = column"
-                          >
-                            <div class="flex items-center gap-4 w-full">
-                              <div>
-                                <div class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-500 text-white">
-                                  <IconPencil class="w-3 h-3" />
-                                </div>
-                              </div>
-                              <div class="min-w-0 truncate">
-                                Edit Column
-                              </div>
+                        <div class="flex items-center gap-4 w-full">
+                          <div>
+                            <div class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-500 text-white">
+                              <IconPencil class="w-3 h-3" />
                             </div>
-                          </DropdownOption>
-                          <DropdownOption
-                            @click="() => handleDeleteColumn(column.id)"
-                          >
-                            <div class="flex items-center gap-4 w-full">
-                              <div>
-                                <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white">
-                                  <IconBin class="w-4 h-4" />
-                                </div>
-                              </div>
-                              <div class="min-w-0 truncate">
-                                Delete Column
-                              </div>
+                          </div>
+                          <div class="min-w-0 truncate">
+                            Edit Column
+                          </div>
+                        </div>
+                      </DropdownOption>
+                      <DropdownOption
+                        @click="() => handleDeleteColumn(column.id)"
+                      >
+                        <div class="flex items-center gap-4 w-full">
+                          <div>
+                            <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white">
+                              <IconBin class="w-4 h-4" />
                             </div>
-                          </DropdownOption>
-                        </template>
-                      </Dropdown>
-                    </div>
+                          </div>
+                          <div class="min-w-0 truncate">
+                            Delete Column
+                          </div>
+                        </div>
+                      </DropdownOption>
+                    </template>
+                  </Dropdown>
+                </div>
+              </div>
+
+              <!-- Column cards -->
+              <PerfectScrollbar
+                :style="{
+                  maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem)`,
+                }"
+              >
+                <div
+                  ref="cardRefs"
+                  :data-column-id="column.id"
+                  class="flex flex-col gap-4 w-full min-h-[200px] p-4"
+                >
+                  <div
+                    v-for="card in boardsStore.getColumnCards(column.id).sort((a, b) => a.order - b.order)"
+                    :id="card.id"
+                    :key="card.id"
+                    :data-card-id="card.id"
+                    :data-column-id="column.id"
+                    class="rounded-lg bg-white shadow-sm p-6 outline-2 outline-dashed outline-transparent"
+                  >
+                    {{ card.order }} - {{ card.title }}
                   </div>
 
-                  <!-- Column cards -->
-                  <PerfectScrollbar
-                    :style="{
-                      maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem)`,
-                    }"
-                  >
-                    <div class="flex flex-col gap-4 w-full min-h-[200px] p-4">
-                      <div
-                        v-for="card in boardsStore.getColumnCards(column.id)"
-                        :key="card.id"
-                        class="rounded-lg bg-white shadow-sm p-6"
-                      >
-                        {{ card.title }}
-                      </div>
-
-                    </div>
-                  </PerfectScrollbar>
                 </div>
-              </SmoothReflow>
+              </PerfectScrollbar>
             </div>
-          </TransitionGroup>
+          </SmoothReflow>
         </div>
+        <div class="relative shrink-0 basis-[1px] h-[200px]" />
       </div>
-    </PerfectScrollbar>
+    </div>
 
     <!-- Create board dialog -->
     <DialogCreateBoard
@@ -364,9 +485,7 @@ watch(() => route.params, (params) => {
       :column-id="createdCardColumnCandidate"
       :column-title="columns.find(column => column.id === createdCardColumnCandidate)?.title || ''"
       :open="!!createdCardColumnCandidate"
-      @close="() => {
-        createdCardColumnCandidate = null;
-      }"
+      @close="() => createdCardColumnCandidate = null"
       @create="(card) => handleCreateCard(card)"
     />
 
@@ -417,6 +536,11 @@ watch(() => route.params, (params) => {
 .background-leave-to {
   opacity: 0;
   transform: translateY(1.05);
+}
+
+.card--chosen,
+.column--chosen {
+  @apply !outline-orange-500;
 }
 </style>
 

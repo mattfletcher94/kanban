@@ -1,3 +1,7 @@
+# TODO:
+No boards page.
+
+
 # electron-vite-vue
 
 🥳 Really simple `Electron` + `Vue` + `Vite` boilerplate.

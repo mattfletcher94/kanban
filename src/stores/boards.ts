@@ -3,6 +3,7 @@ import { useStorage } from '@vueuse/core'
 import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import { themes } from '../data/themes'
+import { boards as defaultBoards } from '../data/boards'
 
 export interface Card {
   id: string
@@ -53,7 +54,7 @@ export type CardUpdate = Partial<Omit<Card, 'id' | 'dateCreated' | 'dateUpdated'
 export const useBoardsStore = defineStore({
   id: 'boards',
   state: () => ({
-    boards: useStorage<Board[]>('boards', []),
+    boards: useStorage<Board[]>('boards', defaultBoards),
     columns: useStorage<Column[]>('columns', []),
     cards: useStorage<Card[]>('cards', []),
     themes,
@@ -63,6 +64,7 @@ export const useBoardsStore = defineStore({
     getBoards: state => state.boards,
     getBoardById: state => (id: string) => state.boards.find(board => board.id === id),
     getBoardColumns: state => (boardId: string) => state.columns.filter(column => column.boardId === boardId),
+    getBoardCards: state => (boardId: string) => state.cards.filter(card => state.columns.find(column => column.boardId === boardId && column.id === card.columnId)),
     getColumnCards: state => (columnId: string) => state.cards.filter(card => card.columnId === columnId),
     getColumnById: state => (id: string) => state.columns.find(column => column.id === id),
     getCardById: state => (id: string) => state.cards.find(card => card.id === id),
@@ -123,6 +125,12 @@ export const useBoardsStore = defineStore({
         ...column,
         dateUpdated: moment().format(),
       }
+    },
+    updateColumnOrders(orders: { id: string; order: number }[]) {
+      orders.forEach(({ id, order }) => {
+        const index = this.columns.findIndex(column => column.id === id)
+        this.columns[index].order = order
+      })
     },
     deleteColumn(columnId: string) {
       // Find all cards belonging to the column
