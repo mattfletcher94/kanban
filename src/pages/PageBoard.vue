@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
-import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
+import { marked } from 'marked'
 import SmoothReflow from '../components/SmoothReflow.vue'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCard from '../components/Dialogs/DialogCreateCard.vue'
+import DialogEditCard from '../components/Dialogs/DialogEditCard.vue'
 import IconChevonDown from '../components/Icons/IconChevonDown.vue'
 import IconAdd from '../components/Icons/IconAdd.vue'
 import IconConfig from '../components/Icons/IconConfig.vue'
@@ -18,7 +19,7 @@ import IconBin from '../components/Icons/IconBin.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import { useBoardsStore } from './../stores/boards'
-import type { BoardCreate, BoardUpdate, CardCreate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
+import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
 
 const router = useRouter()
 const route = useRoute()
@@ -31,11 +32,28 @@ const columns = computed(() => boardsStore.getBoardColumns(board.value?.id || ''
 const columnRef = ref<HTMLElement>()
 const cardRefs = ref<HTMLElement[]>([])
 const isCreateDialogOpen = ref(false)
+
 const isCreateColumnDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
-const createdCardColumnCandidate = ref<string | null>(null)
+const createCardColumnCandidate = ref<string | null>(null)
+
+const isCreateCardDialogOpen = ref(false)
+const editCardCandidate = ref<Card | null>(null)
+
 const columnsSortableInstance = ref<Sortable>()
 const cardSortableInstances = ref<Map<string, Sortable>>(new Map())
+
+const parseMarkdown = (markdown = '') => {
+  return marked.parse(markdown, {
+    headerIds: false,
+  })
+}
+
+const parseMarkdownInline = (markdown = '') => {
+  return marked.parseInline(markdown, {
+    headerIds: false,
+  })
+}
 
 const handleCreateBoard = (board: BoardCreate) => {
   const created = boardsStore.createBoard(board)
@@ -85,7 +103,12 @@ const handleDeleteColumn = (columnId: string) => {
 const handleCreateCard = (card: CardCreate) => {
   card.order = boardsStore.getColumnCards(card.columnId).length
   boardsStore.createCard(card)
-  createdCardColumnCandidate.value = null
+  createCardColumnCandidate.value = null
+}
+
+const handleUpdateCard = (card: CardUpdate) => {
+  boardsStore.updateCard(card)
+  // editCardCandidate.value = null
 }
 
 const initSortableCards = () => {
@@ -102,7 +125,9 @@ const initSortableCards = () => {
       group: 'cards',
       animation: 300,
       dataIdAttr: 'data-card-id',
-      chosenClass: 'card--chosen',
+      handle: '.board__columns__column__cards__card__handle',
+      draggable: '.board__columns__column__cards__card',
+      chosenClass: 'board__columns__column__cards__card--chosen',
       onEnd(this: Sortable, evt) {
         if (!board.value)
           return
@@ -116,7 +141,7 @@ const initSortableCards = () => {
           const columnCards = boardsStore.getColumnCards(oldColumnId)
           columnCards.forEach((card, i) => {
             boardsStore.updateCard({
-              id: card.id,
+              ...card,
               columnId: card.columnId,
               order: orders.indexOf(card.id),
             })
@@ -132,6 +157,7 @@ const initSortableCards = () => {
           if (!card)
             return
           boardsStore.updateCard({
+            ...card,
             id: card.id,
             columnId: newColumnId,
           })
@@ -140,7 +166,7 @@ const initSortableCards = () => {
           const columnCards = boardsStore.getColumnCards(newColumnId)
           columnCards.forEach((c) => {
             boardsStore.updateCard({
-              id: c.id,
+              ...card,
               columnId: newColumnId,
               order: orders.indexOf(c.id),
             })
@@ -161,15 +187,12 @@ const initSortableColumns = () => {
   columnsSortableInstance.value = Sortable.create(columnRef.value, {
     group: 'columns',
     animation: 300,
-    draggable: '.column',
-    handle: '.column__handle',
+    draggable: '.board__columns__column',
+    handle: '.board__columns__column__handle',
     dataIdAttr: 'data-column-id',
-    chosenClass: 'column--chosen',
+    chosenClass: 'board__columns__column--chosen',
     direction: 'horizontal',
-    scrollFn(offsetX, offsetY, originalEvent, touchEvt, hoverTargetEl) {
-      console.log(offsetX, offsetY, originalEvent, touchEvt, hoverTargetEl)
-    },
-    onEnd(this: Sortable, evt) {
+    onEnd(this: Sortable) {
       const orders = this.toArray()
       const columns = boardsStore.getBoardColumns(board.value?.id || '')
       columns.forEach((col) => {
@@ -217,7 +240,7 @@ watch(() => columns.value.length, () => {
   <div v-if="board" class="relative block w-full h-screen overflow-hidden text-slate-700">
 
     <!-- Theme bg -->
-    <Transition mode="in-out" name="background">
+    <Transition mode="out-in" appear name="background">
       <div
         v-if="theme"
         :key="theme?.id"
@@ -324,34 +347,32 @@ watch(() => columns.value.length, () => {
     </header>
 
     <!-- Board area -->
-    <div
-      :key="board.id"
-      :style="{
-        height: 'calc(100vh - 4rem)',
-        width: '100%',
-        overflowX: 'auto',
-      }"
+    <Transition
+      class="board overflow-x-auto overflow-y-hidden w-full"
+      name="board"
+      as="div"
+      appear
     >
 
       <!-- Columns -->
       <div
         ref="columnRef"
-        class="columns flex flex-nowrap items-start w-auto p-6 gap-6"
+        class="board__columns flex flex-nowrap items-start w-auto p-6 gap-6"
       >
         <div
           v-for="column in columns"
           :id="column.id"
           :key="column.id"
           :data-column-id="column.id"
-          class="column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+          class="board__columns__column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
         >
           <SmoothReflow>
             <div class="block w-full">
 
               <!-- Column title -->
-              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 h-12 border-b border-b-slate-200 text-slate-700">
+              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 h-12 border-b border-b-slate-200 text-slate-800">
                 <div
-                  class="column__handle cursor-grab"
+                  class="board__columns__column__handle cursor-grab"
                 >
                   <IconHandle class="w-4 h-4" />
                 </div>
@@ -369,7 +390,7 @@ watch(() => columns.value.length, () => {
                   <button
                     v-tooltip="{ content: 'Add Card' }"
                     class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
-                    @click="() => createdCardColumnCandidate = column.id"
+                    @click="() => createCardColumnCandidate = column.id"
                   >
                     <IconAdd class="w-4 h-4" />
                   </button>
@@ -422,7 +443,8 @@ watch(() => columns.value.length, () => {
               </div>
 
               <!-- Column cards -->
-              <PerfectScrollbar
+              <div
+                class="board__columns__column__cards block w-full overflow-x-hidden overflow-y-auto"
                 :style="{
                   maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem)`,
                 }"
@@ -430,27 +452,60 @@ watch(() => columns.value.length, () => {
                 <div
                   ref="cardRefs"
                   :data-column-id="column.id"
-                  class="flex flex-col gap-4 w-full min-h-[200px] p-4"
+                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 w-full min-h-[200px]"
                 >
+
+                  <!-- Card -->
                   <div
                     v-for="card in boardsStore.getColumnCards(column.id).sort((a, b) => a.order - b.order)"
                     :id="card.id"
                     :key="card.id"
                     :data-card-id="card.id"
                     :data-column-id="column.id"
-                    class="rounded-lg bg-white shadow-sm p-6 outline-2 outline-dashed outline-transparent"
+                    class="board__columns__column__cards__card rounded-lg bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-pointer"
+                    @click="() => editCardCandidate = card"
                   >
-                    {{ card.order }} - {{ card.title }}
-                  </div>
 
+                    <!-- Card Labels -->
+                    <div
+                      v-if="card.labelIds && card.labelIds.length"
+                      class="flex justify-start items-start gap-4"
+                    >
+                      <div
+                        v-for="label in boardsStore.getCardLabels(card.id)"
+                        :key="label.id"
+                      >
+                        {{ label.title }}
+                      </div>
+                    </div>
+
+                    <!-- Card title -->
+                    <div class="flex w-full items-start justify-start font-medium gap-4 px-4 py-3 border-b border-b-slate-200">
+                      <div
+                        class="board__columns__column__cards__card__handle cursor-grab"
+                      >
+                        <IconHandle class="w-4 h-4" />
+                      </div>
+                      <div class="min-w-0">
+                        <h4
+                          :key="card.title"
+                          class="tracking-wide min-w-0 mt-[3px] text-sm font-semibold"
+                          v-html="parseMarkdownInline(card.title)"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Card body -->
+                    <div class="prose-card p-4 min-h-[100px]" v-html="parseMarkdown(card.description)" />
+                  </div>
                 </div>
-              </PerfectScrollbar>
+              </div>
             </div>
           </SmoothReflow>
         </div>
         <div class="relative shrink-0 basis-[1px] h-[200px]" />
       </div>
-    </div>
+    </Transition>
 
     <!-- Create board dialog -->
     <DialogCreateBoard
@@ -480,38 +535,55 @@ watch(() => columns.value.length, () => {
 
     <!-- Create card dialog -->
     <DialogCreateCard
-      v-if="createdCardColumnCandidate"
+      v-if="createCardColumnCandidate"
       :key="board.id"
-      :column-id="createdCardColumnCandidate"
-      :column-title="columns.find(column => column.id === createdCardColumnCandidate)?.title || ''"
-      :open="!!createdCardColumnCandidate"
-      @close="() => createdCardColumnCandidate = null"
+      :column-id="createCardColumnCandidate"
+      :column-title="columns.find(column => column.id === createCardColumnCandidate)?.title || ''"
+      :open="!!createCardColumnCandidate"
+      @close="() => createCardColumnCandidate = null"
       @create="(card) => handleCreateCard(card)"
+    />
+
+    <DialogEditCard
+      v-if="editCardCandidate"
+      :open="!!editCardCandidate"
+      :card="editCardCandidate"
+      @close="() => editCardCandidate = null"
+      @save="(card) => handleUpdateCard(card)"
     />
 
   </div>
 </template>
 
 <style scoped>
-.columns-move, /* apply transition to moving elements */
-.columns-enter-active,
-.columns-leave-active {
-  transition: all 0.5s ease;
+.board {
+  height: calc(100vh - 4rem);
+}
+.board::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: rgba(255,255,255,0.8);
+}
+.board::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.3);
+  @apply rounded-lg;
+}
+.board__columns__column__cards::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(0,0,0,0.1);
+}
+.board__columns__column__cards::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  @apply rounded-lg;
 }
 
-.columns-enter-from {
-  opacity: 0;
-  transform: scale(0.9);
-}
-.columns-leave-to {
-  opacity: 0;
-  transform: translateY(0.9);
+.board__columns__column__cards__card--chosen,
+.board__columns__column--chosen {
+  @apply !outline-orange-500;
 }
 
-.columns-leave-active {
-  position: absolute;
-}
-
+/** Transitions */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: opacity 200ms ease, transform 200ms ease;
@@ -529,18 +601,23 @@ watch(() => columns.value.length, () => {
 .background-leave-active {
   transition: opacity 200ms ease, transform 200ms ease;
 }
-.background-enter-from {
+.background-enter-from,
+.background-leave-to {
   opacity: 0;
   transform: scale(1.05);
 }
-.background-leave-to {
-  opacity: 0;
-  transform: translateY(1.05);
-}
 
-.card--chosen,
-.column--chosen {
-  @apply !outline-orange-500;
+.board-enter-active,
+.board-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.board-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.board-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 </style>
 

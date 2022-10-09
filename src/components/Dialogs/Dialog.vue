@@ -103,19 +103,19 @@ const handleClose = () => {
                 <div v-if="$slots.content" ref="dialogContent" class="dialog-content" :style="{ maxHeight: contentHeight }">
                   <slot name="content" />
                 </div>
-                <div ref="dialogHeader" class="dialog-header">
-                  <div class="flex w-full items-center justify-between">
-                    <div>
-                      <h2 class="text-base font-bold">
-                        <template v-if="$slots.header">
-                          <slot name="header" />
-                        </template>
-                        <template v-else>
+                <div v-if="$slots.header || props.title" ref="dialogHeader" class="dialog-header">
+                  <div class="flex w-full gap-4 items-center justify-start">
+                    <div class="w-full">
+                      <template v-if="$slots.header">
+                        <slot name="header" />
+                      </template>
+                      <template v-else>
+                        <h2 class="text-base font-bold">
                           {{ props.title }}
-                        </template>
-                      </h2>
+                        </h2>
+                      </template>
                     </div>
-                    <div>
+                    <div class="ml-auto">
                       <button
                         type="button"
                         title="Close"

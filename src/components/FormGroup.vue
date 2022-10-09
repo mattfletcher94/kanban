@@ -38,10 +38,16 @@ provide('label', props.label)
     }"
   >
     <label
+      v-if="props.label || $slots.label"
       :for="props.for"
       class="form-group__label"
     >
-      {{ props.label }}
+      <template v-if="$slots.label">
+        <slot name="label" />
+      </template>
+      <template v-else>
+        {{ props.label }}
+      </template>
     </label>
     <div class="form-group__input">
       <slot />

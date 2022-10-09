@@ -7,7 +7,7 @@
 
   /** General button styles */
   .btn {
-    @apply inline-block text-center text-sm px-4 py-2 rounded-full font-semibold transition-colors tracking-wide !no-underline cursor-pointer;
+    @apply inline-block text-center text-sm px-4 py-2 rounded-md font-semibold transition-colors tracking-wide !no-underline cursor-pointer;
     @apply outline outline-offset-2 outline-transparent;
   }
   
@@ -108,6 +108,76 @@
       prose-img:block
       prose-strong:text-black
       max-w-none;
+  }
+
+  .prose-card {
+    @apply prose max-w-none;
+    @apply
+
+      /** Headings **/
+      prose-headings:text-slate-700
+      prose-headings:font-bold
+      prose-h1:text-lg
+      prose-h2:text-base
+      prose-h3:text-sm
+      prose-h4:text-sm
+
+      /** Paragraph */
+      prose-p:text-slate-700
+      prose-p:text-base
+
+      /** Anchor */
+      prose-a:no-underline 
+      prose-a:text-primary-500
+
+      /** Lists */
+      prose-ul:list-outside
+      prose-li:text-slate-700
+      prose-li:text-base
+
+      /** Strong */
+      prose-strong:font-bold
+      prose-strong:text-slate-700
+
+      /** Margins */
+      prose-h1:mt-0
+      prose-h1:mb-[1.5em]
+      prose-h2:mt-0
+      prose-h2:mb-[1.5em]
+      prose-h3:mt-0
+      prose-h3:mb-[1.5em]
+      prose-h4:mt-0
+      prose-h4:mb-[1.5em]
+      prose-p:mt-0
+      prose-p:mb-[1.5em]
+      prose-ul:mt-0
+      prose-ul:mb-[1.5em]
+
+    /*@apply
+      prose
+      prose-headings:text-slate-700
+      prose-h1:font-bold
+      prose-h2:font-bold
+      prose-h3:font-bold
+      prose-h4:font-bold
+      prose-p:font-normal
+      prose-h1:text-lg
+      prose-h2:text-base
+      prose-h3:text-sm
+      prose-h4:text-sm
+      prose-p:text-sm
+      prose-p:text-slate-700
+      prose-a:no-underline 
+      prose-a:text-gray-800
+      prose-ul:list-outside
+      prose-li:text-slate-700
+      prose-li:text-sm
+      prose-strong:text-slate-700
+      max-w-none;*/
+  }
+
+  .prose-card > *:last-child {
+    @apply mb-0;
   }
 
 }
