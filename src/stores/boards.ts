@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import { themes } from '../data/themes'
 import { labels as defaultLabels } from '../data/labels'
-import { boards as defaultBoards } from '../data/boards'
+import { boards as defaultBoards, columns as defaultColumns } from '../data/boards'
 
 export interface Card {
   id: string
@@ -39,6 +39,7 @@ export interface Theme {
   id: string
   title: string
   image: string
+  thumbnail: string
 }
 
 export interface Label {
@@ -69,7 +70,7 @@ export const useBoardsStore = defineStore({
   id: 'boards',
   state: () => ({
     boards: useStorage<Board[]>('boards', defaultBoards),
-    columns: useStorage<Column[]>('columns', []),
+    columns: useStorage<Column[]>('columns', defaultColumns),
     cards: useStorage<Card[]>('cards', []),
     themes,
     labels: useStorage<Label[]>('labels', defaultLabels),
@@ -80,14 +81,14 @@ export const useBoardsStore = defineStore({
     getBoardById: state => (id: string) => state.boards.find(board => board.id === id),
     getBoardColumns: state => (boardId: string) => state.columns.filter(column => column.boardId === boardId),
     getBoardCards: state => (boardId: string) => state.cards.filter(card => state.columns.find(column => column.boardId === boardId && column.id === card.columnId)),
-    getColumnCards: state => (columnId: string) => state.cards.filter(card => card.columnId === columnId),
+    getColumnCards: state => (columnId: string) => state.cards.filter(card => card.columnId === columnId).sort((a, b) => a.order - b.order),
     getColumnById: state => (id: string) => state.columns.find(column => column.id === id),
     getCardById: state => (id: string) => state.cards.find(card => card.id === id),
     getCardLabels: state => (cardId: string) => {
       const card = state.cards.find(card => card.id === cardId)
       if (!card)
         return []
-      const labels = state.labels.filter(label => card.labelIds?.includes(label.id))
+      const labels = state.labels.filter(label => card.labelIds.includes(label.id))
       return labels
     },
     getLabels: state => state.labels,
@@ -214,7 +215,7 @@ export const useBoardsStore = defineStore({
       // Remove label from cards
       this.cards = this.cards.map(card => ({
         ...card,
-        labelIds: card.labelIds.filter(id => id !== labelId),
+        labelIds: card.labelIds?.filter(id => id !== labelId) ?? [],
       }))
 
       // Remove label

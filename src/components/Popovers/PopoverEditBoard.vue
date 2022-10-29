@@ -9,6 +9,7 @@ import FormGroup from '../FormGroup.vue'
 import Dropdown from '../Dropdowns/Dropdown.vue'
 import DropdownOption from '../Dropdowns/DropdownOption.vue'
 import Popover from './Popover.vue'
+import PopoverConfirm from './PopoverConfirm.vue'
 
 const props = defineProps({
   triggerClass: {
@@ -52,6 +53,7 @@ const onSubmit = form.handleSubmit((values, actions) => {
 })
 
 const handleDeleteBoard = () => {
+  console.log('deleteBoard')
   emit('deleteBoard', props.board.id)
 }
 </script>
@@ -59,7 +61,7 @@ const handleDeleteBoard = () => {
 <template>
   <Popover
     width="300px"
-    anchor="right"
+    anchor="bottom-end"
     :trigger-class="props.triggerClass"
   >
     <template #trigger>
@@ -91,7 +93,7 @@ const handleDeleteBoard = () => {
                   <div>
                     <div
                       class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                      :style="{ backgroundImage: `url(${selectedTheme?.image})` }"
+                      :style="{ backgroundImage: `url(${selectedTheme?.thumbnail})` }"
                     />
                   </div>
                   <div>
@@ -110,7 +112,7 @@ const handleDeleteBoard = () => {
                     <div>
                       <div
                         class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                        :style="{ backgroundImage: `url(${theme.image})` }"
+                        :style="{ backgroundImage: `url(${theme.thumbnail})` }"
                       />
                     </div>
                     <div>
@@ -129,13 +131,17 @@ const handleDeleteBoard = () => {
           </button>
         </form>
         <div class="mt-6 pt-6 border-t border-t-slate-300">
-          <button
-            class="btn btn--danger w-full"
-            type="button"
-            @click="() => handleDeleteBoard()"
+          <PopoverConfirm
+            width="300px"
+            anchor="bottom-end"
+            message="Are you sure you want to delete this board? This cannot be undone."
+            trigger-class="btn btn--danger w-full"
+            @confirm="() => handleDeleteBoard()"
           >
-            Delete board
-          </button>
+            <template #trigger>
+              Delete board
+            </template>
+          </PopoverConfirm>
         </div>
       </div>
     </template>

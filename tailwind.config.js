@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */ 
+/** @type {import('tailwindcss').Config} */
 const colors = require('tailwindcss/colors')
 const defaultTheme = require('tailwindcss/defaultTheme')
 
@@ -8,8 +8,8 @@ module.exports = {
   darkMode: 'class',
 
   content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
   ],
   theme: {
     screens: {
@@ -19,12 +19,12 @@ module.exports = {
     extend: {
       keyframes: {
         fade: {
-          "0%": { opacity: 0 },
-          "100%": { opacity: 1 },
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
         },
       },
       animation: {
-        "fade-in-out": "fade 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+        'fade-in-out': 'fade 250ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
       colors: {
         primary: {
@@ -68,9 +68,9 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'), 
-    require('@tailwindcss/line-clamp'), 
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/line-clamp'),
     require('@tailwindcss/aspect-ratio'),
-    require('@tailwindcss/forms')
+    require('@tailwindcss/forms'),
   ],
 }

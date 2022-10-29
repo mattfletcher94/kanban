@@ -2,30 +2,32 @@
 import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
-import { computed, watch } from 'vue'
-import type { BoardCreate } from '../../stores/boards'
-import { useBoardsStore } from '../../stores/boards'
-import DropdownOption from '../Dropdowns/DropdownOption.vue'
+import { computed, unref, watch } from 'vue'
+import type { Board, BoardUpdate, Column, ColumnCreate, ColumnUpdate, Theme } from '../../stores/boards'
 import Dropdown from '../Dropdowns/Dropdown.vue'
+import DropdownOption from '../Dropdowns/DropdownOption.vue'
+import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
 import IconChevonDown from '../Icons/IconChevonDown.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
 
 const props = defineProps<{
   open: boolean
+  board: Board
+  themes: Theme[]
 }>()
 
-const emits = defineEmits<{
+const emit = defineEmits<{
+  (event: 'delete', boardId: string): void
+  (event: 'save', board: BoardUpdate): void
   (event: 'close'): void
-  (event: 'create', board: BoardCreate): void
 }>()
 
-const boardsStore = useBoardsStore()
-
-const form = useForm<BoardCreate>({
+const form = useForm<BoardUpdate>({
   initialValues: {
-    title: '',
-    themeId: boardsStore.themes[0].id,
+    id: unref(props.board.id),
+    title: unref(props.board.title),
+    themeId: unref(props.board.themeId),
   },
   validationSchema: toFormValidator(zod.object({
     title: zod.string().min(1, 'Title is required'),
@@ -36,24 +38,34 @@ const form = useForm<BoardCreate>({
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
 
-const selectedTheme = computed(() => boardsStore.getThemeById(themeId.value))
+const selectedTheme = computed(() => props.themes.find(t => t.id === themeId.value))
 
 const onSubmit = form.handleSubmit((values, actions) => {
-  emits('create', values)
+  emit('save', values)
 })
 
+const handleDeleteBoard = () => {
+  emit('delete', props.board.id)
+}
+
 const onClose = () => {
-  emits('close')
+  emit('close')
 }
 
 watch(() => props.open, () => {
-  props.open && form.handleReset()
+  if (props.open) {
+    form.setValues({
+      id: unref(props.board.id),
+      title: unref(props.board.title),
+      themeId: unref(props.board.themeId),
+    })
+  }
 })
 </script>
 
 <template>
   <Dialog
-    title="Create Board"
+    title="Edit Board"
     width="420px"
     :open="props.open"
     @close="() => onClose()"
@@ -96,7 +108,7 @@ watch(() => props.open, () => {
             </template>
             <template #options>
               <DropdownOption
-                v-for="theme in boardsStore.themes"
+                v-for="theme in themes"
                 :key="theme.id"
                 :selected="theme.id === themeId"
                 @click="() => form.setFieldValue('themeId', theme.id)"
@@ -116,12 +128,35 @@ watch(() => props.open, () => {
             </template>
           </Dropdown>
         </FormGroup>
-        <div class="flex items-center justify-center gap-4 mt-12">
-          <button class="btn btn--primary " type="submit">
-            Create Board
-          </button>
+
+        <div class="flex items-center justify-between gap-4 mt-12">
+          <div>
+            <PopoverConfirm
+              trigger-class="text-sm text-red-600 font-medium underline"
+              message="Are you sure you want to delete this Board? This cannot be undone."
+              width="270px"
+              confirm-text="Delete"
+              cancel-text="Cancel"
+              anchor="top-start"
+              @confirm="() => handleDeleteBoard()"
+            >
+              <template #trigger>
+                Delete Card
+              </template>
+            </PopoverConfirm>
+          </div>
+          <div>
+            <button
+              class="btn btn--primary"
+              type="submit"
+            >
+              Save Changes
+            </button>
+          </div>
+
         </div>
       </form>
     </template>
   </Dialog>
 </template>
+

@@ -23,4 +23,11 @@ export const labels: Label[] = [
     dateCreated: moment().format(),
     dateUpdated: moment().format(),
   },
+  {
+    id: '4',
+    title: 'Waiting',
+    color: 'blue',
+    dateCreated: moment().format(),
+    dateUpdated: moment().format(),
+  },
 ]

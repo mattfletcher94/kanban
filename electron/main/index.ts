@@ -42,7 +42,7 @@ async function createWindow() {
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
       // Consider using contextBridge.exposeInMainWorld
       // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      nodeIntegration: true,
+      nodeIntegration: false,
       contextIsolation: false,
     },
     autoHideMenuBar: true,
@@ -57,11 +57,6 @@ async function createWindow() {
     // Open devTool if the app is not packaged
     win.webContents.openDevTools()
   }
-
-  // Test actively push message to the Electron-Renderer
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', new Date().toLocaleString())
-  })
 
   // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {

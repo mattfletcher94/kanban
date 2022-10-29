@@ -7,7 +7,7 @@
 
   /** General button styles */
   .btn {
-    @apply inline-block text-center text-sm px-4 py-2 rounded-md font-semibold transition-colors tracking-wide !no-underline cursor-pointer;
+    @apply inline-block text-center text-sm px-4 py-2 rounded-md font-bold transition-colors tracking-wide !no-underline cursor-pointer;
     @apply outline outline-offset-2 outline-transparent;
   }
   
@@ -17,7 +17,7 @@
   }
 
   .btn--sm {
-    @apply px-2 py-1.5 text-xs;
+    @apply px-2 py-1.5 text-sm;
   }
 
   /** Primary button */
@@ -110,7 +110,8 @@
       max-w-none;
   }
 
-  .prose-card {
+  .prose-card,
+  .prose-card--sm {
     @apply prose max-w-none;
     @apply
 
@@ -152,28 +153,16 @@
       prose-p:mb-[1.5em]
       prose-ul:mt-0
       prose-ul:mb-[1.5em]
+  }
 
-    /*@apply
-      prose
-      prose-headings:text-slate-700
-      prose-h1:font-bold
-      prose-h2:font-bold
-      prose-h3:font-bold
-      prose-h4:font-bold
-      prose-p:font-normal
-      prose-h1:text-lg
-      prose-h2:text-base
-      prose-h3:text-sm
-      prose-h4:text-sm
+  .prose-card--sm {
+    @apply prose-h1:text-base
+      prose-h2:text-sm
+      prose-h3:text-xs
+      prose-h4:text-xs
       prose-p:text-sm
-      prose-p:text-slate-700
-      prose-a:no-underline 
-      prose-a:text-gray-800
-      prose-ul:list-outside
-      prose-li:text-slate-700
-      prose-li:text-sm
-      prose-strong:text-slate-700
-      max-w-none;*/
+      prose-ul:text-sm
+      prose-li:text-sm;
   }
 
   .prose-card > *:last-child {
@@ -252,14 +241,31 @@ svg {
 
 /** Tooltip overrides */
 .v-popper__popper .v-popper__wrapper .v-popper__inner {
-  @apply !text-sm !font-medium !px-4 !py-2;
+  @apply !text-xs !font-medium !px-4 !py-2;
   background-color: rgba(0,0,0,0.95);
 }
-
+.v-popper__popper {
+  z-index: 9999999!important;
+}
 .v-popper__popper .v-popper__wrapper .v-popper__arrow-inner {
   display: none;
 }
 
 .v-popper__popper .v-popper__wrapper .v-popper__arrow-outer {
   border-color: rgba(0,0,0,0.95);
+}
+
+/** Vue transitions */
+.vue-list-move, 
+.vue-list-enter-active,
+.vue-list-leave-active {
+  transition: all 300ms ease;
+}
+
+.vue-list-enter-from,
+.vue-list-leave-to {
+  opacity: 0;
+}
+.vue-list-leave-active {
+  position: absolute;
 }

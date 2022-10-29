@@ -3,44 +3,39 @@ import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { computed, nextTick, onMounted, ref, unref, watch } from 'vue'
-import { marked } from 'marked'
-import Multiselect from '@vueform/multiselect'
 import type { Card, CardUpdate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import SmoothReflow from '../SmoothReflow.vue'
-import IconInfo from '../Icons/IconInfo.vue'
 import IconAdd from '../Icons/IconAdd.vue'
-import IconPencil from '../Icons/IconPencil.vue'
-import IconClose from '../Icons/IconClose.vue'
-import IconChevonDown from '../Icons/IconChevonDown.vue'
+import CardLabel from '../CardLabel.vue'
+import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
+import DialogLabelManagement from './DialogLabelManagement.vue'
 
 const props = defineProps<{
-  card: Card
+  card: Card | null
   open: boolean
 }>()
 
 const emits = defineEmits<{
   (event: 'close'): void
   (event: 'save', column: CardUpdate): void
+  (event: 'delete', cardId: string): void
 }>()
 
 const boardsStore = useBoardsStore()
 
-const editMode = ref(false)
-const editingDescription = ref(false)
-const editingLabels = ref(false)
 const descriptionRef = ref<HTMLTextAreaElement>()
 const titleRef = ref<HTMLTextAreaElement>()
+const dialogLabelManagementOpen = ref(false)
 
 const form = useForm<CardUpdate>({
   initialValues: {
-    id: unref(props.card.id || ''),
-    columnId: unref(props.card.columnId || ''),
-    title: unref(props.card.title),
-    description: unref(props.card.description),
-    labelIds: unref(props.card.labelIds || []),
+    id: unref(props.card?.id || ''),
+    columnId: unref(props.card?.columnId || ''),
+    title: unref(props.card?.title),
+    description: unref(props.card?.description),
+    labelIds: unref(props.card?.labelIds || []),
   },
   validationSchema: toFormValidator(zod.object({
     columnId: zod.string().min(1, 'Column is required'),
@@ -52,14 +47,7 @@ const title = form.useFieldModel('title')
 const description = form.useFieldModel('description')
 const labelIds = form.useFieldModel('labelIds')
 
-const parseMarkdown = (markdown: string) => {
-  return marked.parse(markdown, {
-    headerIds: false,
-  })
-}
-
 const onSubmit = form.handleSubmit((values, actions) => {
-  editMode.value = false
   emits('save', values)
 })
 
@@ -67,281 +55,243 @@ const onClose = () => {
   emits('close')
 }
 
-const handleEditDescriptionClick = () => {
-  editingDescription.value = true
-  nextTick(() => {
-    if (descriptionRef.value)
-      descriptionRef.value.focus()
-  })
+const onDeleteCard = () => {
+  emits('delete', props.card?.id || '')
 }
 
 const handleResizeTextarea = async () => {
-  if (descriptionRef.value) {
-    descriptionRef.value.style.height = '72px'
+  if (titleRef.value) {
+    titleRef.value.style.height = '32px'
     await nextTick()
-    descriptionRef.value.style.height = `${descriptionRef.value.scrollHeight + 2}px`
+    titleRef.value.style.height = `${titleRef.value.scrollHeight + 1}px`
+  }
+  if (descriptionRef.value) {
+    descriptionRef.value.style.height = '32px'
+    await nextTick()
+    descriptionRef.value.style.height = `${descriptionRef.value.scrollHeight + 1}px`
   }
 }
 
-const handleSelectedLabelsChange = (labelIds: string[]) => {
-  console.log(labelIds)
+const handleSelectLabel = (id: string) => {
+  if (!labelIds.value)
+    labelIds.value = []
+
+  if (!labelIds.value.includes(id))
+    labelIds.value.push(id)
 }
 
-const labelsToShow = computed(() => {
-  const labels = boardsStore.labels
-  const cardLabels = boardsStore.getCardLabels(props.card.id)
-  return editingLabels.value ? labels : cardLabels
-})
+const handleUnselectLabel = (id: string) => {
+  if (!labelIds.value)
+    labelIds.value = []
 
-const labelsForSelect = computed(() => {
-  return boardsStore.labels.map(label => ({ value: label.id, label: label.title, color: label.color }))
+  if (labelIds.value.includes(id))
+    labelIds.value = labelIds.value.filter(x => x !== id)
+}
+
+const selectedLabels = computed(() => {
+  return boardsStore.labels.filter(label => labelIds.value?.includes(label.id))
 })
 
 onMounted(() => {
   handleResizeTextarea()
 })
 
-watch(() => [descriptionRef.value, description.value], () => {
+watch(() => [titleRef.value, title.value, descriptionRef.value, description.value], () => {
   handleResizeTextarea()
+})
+
+watch(() => props.open, () => {
+  if (props.open) {
+    form.setValues({
+      id: unref(props.card?.id || ''),
+      columnId: unref(props.card?.columnId || ''),
+      title: unref(props.card?.title),
+      description: unref(props.card?.description),
+      labelIds: unref(props.card?.labelIds || []),
+    })
+  }
 })
 </script>
 
 <template>
   <Dialog
     :open="props.open"
-    width="720px"
+    width="660px"
     @close="() => onClose()"
   >
-    <!--
     <template #header>
-      <div class="flex w-full items-center justify-start mt-2">
-        <FormGroup class="">
-          <input
-            v-model="title"
-            spellcheck="false"
-            type="text"
-            class="!bg-transparent !border-transparent focus:!border-primary-500 hover:!bg-gray-50 focus:!bg-gray-50 !font-bold !text-lg "
-            placeholder="Enter card Title..."
-          >
-        </FormGroup>
+      <div class="flex items-center py-2">
+        <textarea
+          ref="titleRef"
+          v-model="title"
+          :rows="1"
+          :spellcheck="false"
+          class="textarea--in-place text-lg font-bold mt-1"
+          placeholder="Add Title"
+        />
       </div>
     </template>
-    -->
     <template #content>
       <a href="#" />
-      <SmoothReflow>
-        <form class="p-4" @submit.prevent="() => onSubmit()">
-          <FormGroup class="mb-6">
-            <template #label>
-              <div class="flex items-center">
-                <div class="">
-                  Title
-                </div>
+      <div class="flex flex-col gap-6">
+        <FormGroup class="px-1">
+          <template #label>
+            <div class="flex items-center justify-between">
+              <div>
+                Labels
               </div>
-            </template>
-            <input
-              v-model="title"
-              type="text"
-              placeholder="Enter card name..."
+            </div>
+          </template>
+          <div class="flex items-start gap-4">
+            <TransitionGroup
+              class="flex flex-wrap gap-2 w-full"
+              name="vue-list"
+              tag="div"
             >
-          </FormGroup>
-          <FormGroup class="mb-6">
-            <template #label>
-              <div class="flex items-center">
-                <div class="">
-                  Labels
-                </div>
-                <!--
-                <div
-                  class="ml-auto"
-                >
-                  <button
-                    class="btn btn--gray h-8 flex items-center gap-2 justify-between font-bold rounded-md"
-                    @click="() => editingLabels = !editingLabels"
-                  >
-                    <div>
-                      {{ editingLabels ? 'Confirm Changes' : 'Edit Labels' }}
-                    </div>
-                  </button>
-                </div>
-                -->
-              </div>
-            </template>
-            <Multiselect
-              v-model="labelIds"
-              placeholder="Select labels..."
-              no-results-text="All labels are selected"
-              mode="tags"
-              :close-on-select="false"
-              :searchable="false"
-              :create-option="false"
-              :can-clear="false"
-              :caret="true"
-              :hide-selected="true"
-              :options="labelsForSelect"
-              :classes="{
-                container: 'relative mx-auto w-full text-slate-700 flex items-center justify-end p-2.5 box-border cursor-pointer border border-gray-300 rounded-md bg-gray-50 text-sm outline-none transition-all',
-                containerDisabled: 'cursor-default bg-gray-100',
-                containerOpen: 'rounded-b-none ',
-                containerActive: 'border border-primary-500 bg-gray-50',
-                multipleLabel: 'flex items-center h-full absolute left-0 top-0 pointer-events-none bg-transparent leading-snug pl-3.5',
-                tags: 'flex-grow flex-shrink flex flex-wrap items-center gap-4',
-                tag: 'flex items-center whitespace-nowrap',
-                placeholder: 'absolute left-0 top-0 h-full flex items-center pointer-events-none bg-transparent px-2.5 text-slate-500',
-                dropdown: 'max-h-60 absolute left-[-1px] right-[-1px] bottom-[1px] transform translate-y-full border border-primary-500 border-t-gray-300 overflow-y-auto z-50 bg-gray-50 flex flex-col rounded-b-md',
-                dropdownHidden: 'hidden',
-                options: 'flex flex-col p-0 m-0 list-none',
-                option: 'block w-full transition-all',
-                optionPointed: 'bg-gray-100',
-                //optionSelected: '',
-                noOptions: 'p-2.5 text-slate-700',
-                noResults: 'p-2.5 text-slate-700',
-                fakeInput: 'bg-transparent absolute left-0 right-0 -bottom-px w-full h-px border-0 p-0 appearance-none outline-none text-transparent',
-                spacer: 'h-[20px] py-px box-content',
-              }"
-            >
-
-              <!-- Caret -->
-              <template #caret>
-                <IconChevonDown class="w-4 h-4" />
-              </template>
-
-              <!-- Tags -->
-              <template #tag="{ option, handleTagRemove }">
-                <div
-                  class="flex items-center text-xs font-bold rounded-md px-2.5 py-1.5 gap-2"
-                  :class="{
-                    'bg-green-500 text-white': option.color === 'green',
-                    'bg-amber-500 text-white': option.color === 'amber',
-                    'bg-red-500 text-white': option.color === 'red',
-                  }"
-                >
-                  <div>
-                    {{ option.label }}
-                  </div>
-                  <div>
-                    <IconClose
-                      class="w-4 h-4"
-                      @click="handleTagRemove(option, $event)"
-                    />
-                  </div>
-                </div>
-              </template>
-
-              <!-- Dropdown tags -->
-              <template #option="{ option }">
-                <div class="flex items-center text-xs font-semibold gap-4 p-2.5">
-                  <div
-                    class="w-5 h-5 rounded-full"
-                    :class="{
-                      'bg-green-500': option.color === 'green',
-                      'bg-amber-500': option.color === 'amber',
-                      'bg-red-500': option.color === 'red',
-                    }"
-                  />
-                  <div>
-                    {{ option.label }}
-                  </div>
-                </div>
-              </template>
-            </Multiselect>
-            <!--
-            <div
-              class="flex gap-2"
-            >
-              <div
-                v-for="label in labelsToShow"
+              <CardLabel
+                v-for="label in selectedLabels"
                 :key="label.id"
-                class="text-xs font-bold rounded-md px-3 py-1.5"
-                :class="{
-                  'bg-green-100 text-slate-700': label.color === 'green',
-                  'bg-amber-100 text-slate-700': label.color === 'amber',
-                  'bg-red-100 text-red-500': label.color === 'red',
-                }"
+                class="h-8"
+                :color="label.color"
+                :title="label.title"
               >
                 {{ label.title }}
-              </div>
-            </div>
-          -->
-            <!--
-            <div
-              class="flex justify-start items-start gap-4 pl-2.5"
-            >
-              <template
-                v-if="card.labelIds && card.labelIds.length"
+              </CardLabel>
+              <button
+                key="button"
+                class="btn btn--gray h-8 flex items-center gap-2 justify-start"
+                @click="() => dialogLabelManagementOpen = true"
               >
-                <div
-                  v-for="label in boardsStore.getCardLabels(card.id)"
-                  :key="label.id"
-                  class=""
-                >
-                  {{ label.title }}
+                <div>
+                  Add Label
                 </div>
-              </template>
-            </div>
-            -->
-          </FormGroup>
-          <FormGroup>
-            <template #label>
-              <div class="flex items-center">
-                <div class="">
-                  Description
+                <div>
+                  <IconAdd class="w-4 h-4" />
                 </div>
-                <div
-                  v-if="editingDescription"
-                  class="ml-auto text-blue-500 text-xs font-medium"
-                >
-                  Markdown is supported. <a class="underline" href="https://www.markdownguide.org/cheat-sheet/" target="_blank">Find out more.</a>
-                </div>
+              </button>
+            </TransitionGroup>
+          </div>
+        </FormGroup>
+        <FormGroup>
+          <template #label>
+            <div class="flex items-center px-1">
+              <div class="">
+                Description
               </div>
-            </template>
-            <textarea
-              v-if="editingDescription"
-              ref="descriptionRef"
-              v-model="description"
-              spellcheck="false"
-              class="!text-base resize-none"
-              placeholder="Enter card description..."
-              @blur="() => editingDescription = false"
-            />
-            <div
-              v-else
-              class="prose-card p-2.5 min-h-[72px] border border-transparent hover:bg-gray-100 transition-colors rounded-md cursor-pointer"
-              :class="{
-                'prose-p:!text-slate-500': !description,
-              }"
-              @click="() => handleEditDescriptionClick()"
-              v-html="parseMarkdown(description || 'Click to add card description...')"
-            />
-          </FormGroup>
-          <div class="flex items-center justify-end gap-4 mt-6">
-            <button class="btn btn--primary" type="submit">
-              Save Card
+            </div>
+          </template>
+          <textarea
+            ref="descriptionRef"
+            v-model="description"
+            :rows="1"
+            :spellcheck="false"
+            class="textarea--in-place text-base"
+            placeholder="No description"
+          />
+        </FormGroup>
+
+        <div class="flex items-center justify-between gap-4 mt-6">
+          <div>
+            <PopoverConfirm
+              trigger-class="text-sm text-red-600 font-medium underline"
+              message="Are you sure you want to delete this Card? This cannot be undone."
+              width="270px"
+              confirm-text="Delete"
+              cancel-text="Cancel"
+              anchor="top-start"
+              @confirm="() => onDeleteCard()"
+            >
+              <template #trigger>
+                Delete Card
+              </template>
+            </PopoverConfirm>
+          </div>
+          <div>
+            <button
+              class="btn btn--primary"
+              type="button"
+              :disabled="!form.meta.value.valid"
+              @click="() => onSubmit()"
+            >
+              Save Changes
             </button>
           </div>
+
+        </div>
+
         <!--
-        <div class="grid grid-cols-12 items-center">
-          <div class="col-span-2">
-            <label class="font-semibold text-sm">Title</label>
+        <FormGroup>
+          <div class="flex items-center justify-center">
+            <button type="button" class="btn btn--gray w-full max-w-[200px]" >
+              <div class="flex items-center justify-center gap-2 w-full rounded-md">
+                <div>
+                  Add Section
+                </div>
+                <div>
+                  <IconAdd class="w-4 h-4" />
+                </div>
+              </div>
+            </button>
           </div>
-          <div class="col-span-10">
-            <FormGroup
-              state="error"
-              label-placement="left"
-              :feedback="(form.submitCount.value > 0 && form.errors.value.title) || ''"
-            >
-              <input
-                v-model="title"
-                type="text"
-                placeholder="Enter card name..."
-              >
-            </FormGroup>
+        </FormGroup>
+        -->
+        <!--
+        <div
+          class="flex flex-col gap-6 w-full mt-6 text-slate-700 pt-6 border-t border-t-gray-200"
+        >
+          <div class="flex items-start gap-2">
+            <div>
+              <IconClock class="w-6 h-6" />
+            </div>
+            <div>
+              <p class="flex items-center gap-1 text-sm tracking-wider font-bold text-slate-700 mb-0">
+                Deadline
+              </p>
+              <p class="font-medium text-sm">
+                December 12th 2022
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start gap-2">
+            <div>
+              <IconClock class="w-6 h-6" />
+            </div>
+            <div>
+              <p class="flex items-center gap-1 text-sm tracking-wider font-bold text-slate-700 mb-0">
+                Date Completed
+              </p>
+              <p class="font-medium text-sm">
+                December 12th 2022
+              </p>
+            </div>
           </div>
         </div>
         -->
-        </form>
-      </SmoothReflow>
+      </div>
+
     </template>
+
   </Dialog>
+  <DialogLabelManagement
+    :open="dialogLabelManagementOpen"
+    :selected-labels="labelIds || []"
+    @select="(labelId) => handleSelectLabel(labelId)"
+    @unselect="(labelId) => handleUnselectLabel(labelId)"
+    @create="(label) => handleSelectLabel(label.id)"
+    @close="() => dialogLabelManagementOpen = false"
+  />
 </template>
 
+<style scoped>
+.textarea--in-place {
+  @apply w-full border-transparent bg-transparent resize-none ring-2 ring-transparent leading-normal rounded-md overflow-hidden;
+
+  @apply !p-1;
+  @apply hover:bg-gray-50 focus:bg-gray-50 focus:ring-2 focus:ring-primary-500;
+}
+
+.description-field {
+  @apply w-full border-transparent bg-transparent resize-none leading-normal rounded-md !p-1 overflow-hidden;
+  @apply hover:bg-gray-50 focus:bg-gray-50 focus:ring-2 focus:ring-primary-500;
+}
+</style>

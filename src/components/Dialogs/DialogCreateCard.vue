@@ -3,12 +3,12 @@ import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { watch } from 'vue'
-import type { CardCreate, ColumnCreate } from '../../stores/boards'
+import type { CardCreate } from '../../stores/boards'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
 
 const props = defineProps<{
-  columnId: string
+  columnId: string | null
   columnTitle: string
   open: boolean
 }>()
@@ -20,7 +20,8 @@ const emits = defineEmits<{
 
 const form = useForm<CardCreate>({
   initialValues: {
-    columnId: props.columnId,
+    columnId: props.columnId || '',
+    labelIds: [],
     title: '',
     order: 0,
   },
@@ -41,7 +42,14 @@ const onClose = () => {
 }
 
 watch(() => props.open, () => {
-  props.open && form.handleReset()
+  if (props.open) {
+    form.setValues({
+      columnId: props.columnId || '',
+      labelIds: [],
+      title: '',
+      order: 0,
+    })
+  }
 })
 </script>
 

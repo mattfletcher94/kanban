@@ -2,18 +2,19 @@
 import { useRoute, useRouter } from 'vue-router'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
-import { marked } from 'marked'
-import SmoothReflow from '../components/SmoothReflow.vue'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCard from '../components/Dialogs/DialogCreateCard.vue'
 import DialogEditCard from '../components/Dialogs/DialogEditCard.vue'
+import DialogEditBoard from '../components/Dialogs/DialogEditBoard.vue'
+import CardLabel from '../components/CardLabel.vue'
 import IconChevonDown from '../components/Icons/IconChevonDown.vue'
 import IconAdd from '../components/Icons/IconAdd.vue'
 import IconConfig from '../components/Icons/IconConfig.vue'
 import Dropdown from '../components/Dropdowns/Dropdown.vue'
 import DropdownOption from '../components/Dropdowns/DropdownOption.vue'
 import PopoverEditBoard from '../components/Popovers/PopoverEditBoard.vue'
+import PopoverConfirm from '../components/Popovers/PopoverConfirm.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
@@ -31,29 +32,17 @@ const columns = computed(() => boardsStore.getBoardColumns(board.value?.id || ''
 
 const columnRef = ref<HTMLElement>()
 const cardRefs = ref<HTMLElement[]>([])
+const deleteColumnPopoverTriggerRef = ref<HTMLElement[]>()
 const isCreateDialogOpen = ref(false)
-
+const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
 const createCardColumnCandidate = ref<string | null>(null)
 
-const isCreateCardDialogOpen = ref(false)
 const editCardCandidate = ref<Card | null>(null)
 
 const columnsSortableInstance = ref<Sortable>()
 const cardSortableInstances = ref<Map<string, Sortable>>(new Map())
-
-const parseMarkdown = (markdown = '') => {
-  return marked.parse(markdown, {
-    headerIds: false,
-  })
-}
-
-const parseMarkdownInline = (markdown = '') => {
-  return marked.parseInline(markdown, {
-    headerIds: false,
-  })
-}
 
 const handleCreateBoard = (board: BoardCreate) => {
   const created = boardsStore.createBoard(board)
@@ -62,12 +51,15 @@ const handleCreateBoard = (board: BoardCreate) => {
 }
 
 const handleUpdateBoard = (updatedValues: BoardUpdate) => {
+  isEditBoardDialogOpen.value = false
   if (!board.value)
     return
   boardsStore.updateBoard(updatedValues)
 }
 
 const handleDeleteBoard = async () => {
+  isEditBoardDialogOpen.value = false
+
   if (!board.value)
     return
 
@@ -76,17 +68,16 @@ const handleDeleteBoard = async () => {
     return
   }
 
-  if (window.confirm(`Are you sure you want to delete the board "${board.value.title}"?`)) {
-    boardsStore.deleteBoard(board.value.id)
-    const nextBoard = boardsStore.boards[0]
-    router.push(`/boards/${nextBoard.id}`)
-  }
+  boardsStore.deleteBoard(board.value.id)
+  const nextBoard = boardsStore.boards[0]
+  router.push(`/boards/${nextBoard.id}`)
 }
 
 const handleCreateColumn = (column: ColumnCreate) => {
+  const highestOrder = Math.max(...columns.value.map(c => c.order)) || 0
   boardsStore.createColumn({
     ...column,
-    order: columns.value.length > 0 ? columns.value[columns.value.length - 1].order + 1 : 0,
+    order: columns.value.length > 0 ? (highestOrder + 1) : 0,
   })
   isCreateColumnDialogOpen.value = false
 }
@@ -96,19 +87,33 @@ const handleUpdateColumn = (column: ColumnUpdate) => {
   editColumnCandidate.value = null
 }
 
+const handleDeleteColumnClick = (columnIndex: number) => {
+  console.log(deleteColumnPopoverTriggerRef.value)
+  if (!deleteColumnPopoverTriggerRef.value || deleteColumnPopoverTriggerRef.value.length < columnIndex)
+    return
+
+  deleteColumnPopoverTriggerRef.value[columnIndex].click()
+}
+
 const handleDeleteColumn = (columnId: string) => {
   boardsStore.deleteColumn(columnId)
 }
 
 const handleCreateCard = (card: CardCreate) => {
   card.order = boardsStore.getColumnCards(card.columnId).length
-  boardsStore.createCard(card)
+  const newCard = boardsStore.createCard(card)
   createCardColumnCandidate.value = null
+  editCardCandidate.value = newCard
 }
 
 const handleUpdateCard = (card: CardUpdate) => {
   boardsStore.updateCard(card)
-  // editCardCandidate.value = null
+  editCardCandidate.value = null
+}
+
+const handleDeleteCard = (cardId: string) => {
+  editCardCandidate.value = null
+  boardsStore.deleteCard(cardId)
 }
 
 const initSortableCards = () => {
@@ -125,10 +130,9 @@ const initSortableCards = () => {
       group: 'cards',
       animation: 300,
       dataIdAttr: 'data-card-id',
-      handle: '.board__columns__column__cards__card__handle',
       draggable: '.board__columns__column__cards__card',
       chosenClass: 'board__columns__column__cards__card--chosen',
-      onEnd(this: Sortable, evt) {
+      async onEnd(this: Sortable, evt) {
         if (!board.value)
           return
 
@@ -139,11 +143,16 @@ const initSortableCards = () => {
         if (oldColumnId === newColumnId) {
           const orders = this.toArray()
           const columnCards = boardsStore.getColumnCards(oldColumnId)
-          columnCards.forEach((card, i) => {
+
+          orders.forEach((order, i) => {
+            const card = columnCards.find(card => card.id === order)
+            if (!card)
+              return
+
             boardsStore.updateCard({
               ...card,
               columnId: card.columnId,
-              order: orders.indexOf(card.id),
+              order: i,
             })
           })
         }
@@ -156,6 +165,8 @@ const initSortableCards = () => {
           const card = boardsStore.getCardById(evt.item.dataset.cardId || '')
           if (!card)
             return
+
+          // Move card to column
           boardsStore.updateCard({
             ...card,
             id: card.id,
@@ -164,11 +175,16 @@ const initSortableCards = () => {
 
           const orders = newColumnSortableInstance.toArray()
           const columnCards = boardsStore.getColumnCards(newColumnId)
-          columnCards.forEach((c) => {
+
+          orders.forEach((order, i) => {
+            const card = columnCards.find(card => card.id === order)
+            if (!card)
+              return
+
             boardsStore.updateCard({
               ...card,
-              columnId: newColumnId,
-              order: orders.indexOf(c.id),
+              columnId: card.columnId,
+              order: i,
             })
           })
         }
@@ -214,10 +230,8 @@ onMounted(() => {
   }
 
   const selectedBoard = boardsStore.getBoardById(boardsStore.selectedBoardId)
-  if (selectedBoard) {
+  if (selectedBoard)
     router.push(`/boards/${selectedBoard.id}`)
-    return
-  }
 
   const nextBoard = boardsStore.boards[0]
   router.push(`/boards/${nextBoard.id}`)
@@ -237,22 +251,24 @@ watch(() => columns.value.length, () => {
 </script>
 
 <template>
-  <div v-if="board" class="relative block w-full h-screen overflow-hidden text-slate-700">
+  <div class="relative block w-full h-screen overflow-hidden text-slate-700">
 
-    <!-- Theme bg -->
-    <Transition mode="out-in" appear name="background">
-      <div
-        v-if="theme"
-        :key="theme?.id"
-        class="absolute inset-0 bg-cover bg-no-repeat bg-center"
-        :style="{ backgroundImage: `url(${theme?.image})` }"
-      />
-    </Transition>
+    <!-- Board -->
+    <template v-if="board">
 
-    <!-- Header -->
-    <header class="relative block w-full text-base z-20 bg-white shadow-md">
-      <div class="block h-16 px-4 mx-auto">
-        <div class="flex items-center gap-4 h-full">
+      <!-- Theme bg -->
+      <Transition mode="out-in" appear name="background">
+        <div
+          v-if="theme"
+          :key="theme?.id"
+          class="absolute inset-0 bg-cover bg-no-repeat bg-center"
+          :style="{ backgroundImage: `url(${theme?.image})` }"
+        />
+      </Transition>
+
+      <!-- Header -->
+      <header class="relative block w-full text-base z-20 bg-white shadow-md">
+        <div class="flex items-center gap-4 w-full h-16 px-4">
           <div>
             <div class="flex items-center justify-center w-9 h-9 rounded-md bg-primary-500 text-white">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -260,10 +276,10 @@ watch(() => columns.value.length, () => {
               </svg>
             </div>
           </div>
-          <div>
+          <div class="shrink-0">
             <Dropdown width="100%">
               <template #trigger>
-                <button class="btn btn--gray flex w-48 items-center justify-between font-bold rounded-md h-9">
+                <button class="btn btn--gray flex w-[280px] items-center justify-between font-bold rounded-md h-9">
                   <Transition mode="out-in" name="slide-fade">
                     <div :key="board.title" class="tracking-wide min-w-0 truncate">
                       {{ board.title }}
@@ -278,7 +294,7 @@ watch(() => columns.value.length, () => {
                 <DropdownOption
                   @click="() => isCreateDialogOpen = true"
                 >
-                  <div class="flex items-center gap-4 w-full">
+                  <div class="flex items-center gap-4 w-full p-1">
                     <div>
                       <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white">
                         <IconAdd class="w-4 h-4" />
@@ -292,14 +308,13 @@ watch(() => columns.value.length, () => {
                 <DropdownOption
                   v-for="b in boardsStore.boards.sort((a, b) => a.title.localeCompare(b.title))"
                   :key="b.id"
-                  :disabled="b.id === board?.id"
                   @click="() => router.push(`/boards/${b.id}`)"
                 >
-                  <div class="flex items-center gap-4 w-full">
+                  <div class="flex items-center gap-4 w-full p-1">
                     <div>
                       <div
                         class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                        :style="{ backgroundImage: `url(${boardsStore.getThemeById(b.themeId)?.image})` }"
+                        :style="{ backgroundImage: `url(${boardsStore.getThemeById(b.themeId)?.thumbnail})` }"
                       />
                     </div>
                     <div class="min-w-0 truncate">
@@ -324,53 +339,47 @@ watch(() => columns.value.length, () => {
             </button>
           </div>
           <div>
-            <PopoverEditBoard
-              :key="board.id"
-              :board="board"
-              :themes="boardsStore.themes"
-              trigger-class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
-              @save-board="(board) => handleUpdateBoard(board)"
-              @delete-board="(id) => handleDeleteBoard()"
+            <button
+              class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
+              @click="() => isEditBoardDialogOpen = true"
             >
-              <template #trigger>
-                <div>
-                  Board settings
-                </div>
-                <div>
-                  <IconConfig class="w-4 h-4" />
-                </div>
-              </template>
-            </PopoverEditBoard>
+              <div>
+                Board settings
+              </div>
+              <div>
+                <IconConfig class="w-4 h-4" />
+              </div>
+            </button>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <!-- Board area -->
-    <Transition
-      class="board overflow-x-auto overflow-y-hidden w-full"
-      name="board"
-      as="div"
-      appear
-    >
-
-      <!-- Columns -->
-      <div
-        ref="columnRef"
-        class="board__columns flex flex-nowrap items-start w-auto p-6 gap-6"
+      <!-- Board area -->
+      <Transition
+        class="board overflow-x-auto overflow-y-hidden w-full"
+        name="board"
+        as="div"
+        appear
+        mode="out-in"
       >
+
+        <!-- Columns -->
         <div
-          v-for="column in columns"
-          :id="column.id"
-          :key="column.id"
-          :data-column-id="column.id"
-          class="board__columns__column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+          v-if="columns.length > 0"
+          ref="columnRef"
+          class="board__columns flex flex-nowrap items-start w-auto p-6 gap-6"
         >
-          <SmoothReflow>
+          <div
+            v-for="(column, columnIndex) in columns"
+            :id="column.id"
+            :key="column.id"
+            :data-column-id="column.id"
+            class="board__columns__column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+          >
             <div class="block w-full">
 
               <!-- Column title -->
-              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 h-12 border-b border-b-slate-200 text-slate-800">
+              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 py-2.5 border-b border-b-slate-200 text-slate-800">
                 <div
                   class="board__columns__column__handle cursor-grab"
                 >
@@ -380,7 +389,7 @@ watch(() => columns.value.length, () => {
                   <Transition mode="out-in" name="slide-fade">
                     <h3
                       :key="column.title"
-                      class="tracking-wide min-w-0 truncate text-sm"
+                      class="tracking-wide text-sm"
                     >
                       {{ column.title }}
                     </h3>
@@ -412,11 +421,9 @@ watch(() => columns.value.length, () => {
                       <DropdownOption
                         @click="() => editColumnCandidate = column"
                       >
-                        <div class="flex items-center gap-4 w-full">
+                        <div class="flex items-center gap-4 w-full p-1">
                           <div>
-                            <div class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-500 text-white">
-                              <IconPencil class="w-3 h-3" />
-                            </div>
+                            <IconPencil class="w-4 h-4" />
                           </div>
                           <div class="min-w-0 truncate">
                             Edit Column
@@ -424,13 +431,11 @@ watch(() => columns.value.length, () => {
                         </div>
                       </DropdownOption>
                       <DropdownOption
-                        @click="() => handleDeleteColumn(column.id)"
+                        @click="() => handleDeleteColumnClick(columnIndex)"
                       >
-                        <div class="flex items-center gap-4 w-full">
+                        <div class="flex items-center gap-4 w-full p-1">
                           <div>
-                            <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white">
-                              <IconBin class="w-4 h-4" />
-                            </div>
+                            <IconBin class="w-4 h-4" />
                           </div>
                           <div class="min-w-0 truncate">
                             Delete Column
@@ -439,6 +444,19 @@ watch(() => columns.value.length, () => {
                       </DropdownOption>
                     </template>
                   </Dropdown>
+                  <div class="absolute top-0 right-0">
+                    <PopoverConfirm
+                      message="Are you sure you want to delete this column? This cannot be undone"
+                      trigger-class="absolute top-[30px] right-0 w-0 h-0 p-0"
+                      width="240px"
+                      anchor="bottom-end"
+                      @confirm="() => handleDeleteColumn(column.id)"
+                    >
+                      <template #trigger>
+                        <div ref="deleteColumnPopoverTriggerRef" class="" />
+                      </template>
+                    </PopoverConfirm>
+                  </div>
                 </div>
               </div>
 
@@ -457,99 +475,153 @@ watch(() => columns.value.length, () => {
 
                   <!-- Card -->
                   <div
-                    v-for="card in boardsStore.getColumnCards(column.id).sort((a, b) => a.order - b.order)"
+                    v-for="card in boardsStore.getColumnCards(column.id)"
                     :id="card.id"
                     :key="card.id"
                     :data-card-id="card.id"
                     :data-column-id="column.id"
-                    class="board__columns__column__cards__card rounded-lg bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-pointer"
+                    class="board__columns__column__cards__card rounded-lg p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab"
                     @click="() => editCardCandidate = card"
                   >
 
-                    <!-- Card Labels -->
-                    <div
-                      v-if="card.labelIds && card.labelIds.length"
-                      class="flex justify-start items-start gap-4"
-                    >
-                      <div
-                        v-for="label in boardsStore.getCardLabels(card.id)"
-                        :key="label.id"
-                      >
-                        {{ label.title }}
-                      </div>
-                    </div>
-
                     <!-- Card title -->
-                    <div class="flex w-full items-start justify-start font-medium gap-4 px-4 py-3 border-b border-b-slate-200">
-                      <div
-                        class="board__columns__column__cards__card__handle cursor-grab"
-                      >
-                        <IconHandle class="w-4 h-4" />
-                      </div>
+                    <div class="flex w-full items-start justify-start font-medium gap-4">
                       <div class="min-w-0">
                         <h4
                           :key="card.title"
-                          class="tracking-wide min-w-0 mt-[3px] text-sm font-semibold"
-                          v-html="parseMarkdownInline(card.title)"
+                          class="min-w-0 mt-[3px] text-base font-bold"
+                          v-html="card.title"
                         />
                       </div>
                     </div>
 
+                    <!-- Card Labels -->
+                    <div
+                      v-if="card.labelIds && card.labelIds.length"
+                      class="flex flex-wrap gap-2 w-full items-center mt-2"
+                      name="vue-list"
+                      tag="div"
+                    >
+                      <CardLabel
+                        v-for="label in boardsStore.getCardLabels(card.id)"
+                        :key="label.id"
+                        :color="label.color"
+                        :title="label.title"
+                      >
+                        {{ label.title }}
+                      </CardLabel>
+                    </div>
+
                     <!-- Card body -->
-                    <div class="prose-card p-4 min-h-[100px]" v-html="parseMarkdown(card.description)" />
+                    <div class="flex flex-col gap-4 mt-4">
+                      <div>
+                        <div
+                          v-if="card.description"
+                          class="prose-card prose-card line-clamp-3"
+                          v-html="card.description"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </SmoothReflow>
+          </div>
+          <div class="relative shrink-0 basis-[1px] h-[200px]" />
         </div>
-        <div class="relative shrink-0 basis-[1px] h-[200px]" />
+
+        <!-- Empty state -->
+        <div
+          v-else
+          class="absolute top-0 left-0 w-full h-full flex items-center justify-center"
+        >
+          <div
+            class="flex items-center justify-center flex-col gap-4 text-base p-8 bg-slate-100 rounded-lg shadow-md"
+          >
+            <p class="font-medium text-base">
+              Create your first column
+            </p>
+            <button
+              class="btn btn--primary"
+              @click="() => isCreateColumnDialogOpen = true"
+            >
+              Add Column
+            </button>
+          </div>
+        </div>
+
+      </Transition>
+
+      <!-- Edit Board dialog -->
+      <DialogEditBoard
+        :board="board"
+        :themes="boardsStore.themes"
+        :open="isEditBoardDialogOpen"
+        @save="(board) => handleUpdateBoard(board)"
+        @delete="(boardId) => handleDeleteBoard()"
+        @close="() => isEditBoardDialogOpen = false"
+      />
+
+      <!-- Create column dialog -->
+      <DialogCreateColumn
+        :key="board.id"
+        :board-id="board.id"
+        :open="isCreateColumnDialogOpen"
+        @close="isCreateColumnDialogOpen = false"
+        @create="(column) => handleCreateColumn(column)"
+      />
+
+      <!-- Edit column dialog -->
+      <DialogEditColumn
+        :key="board.id"
+        :column="editColumnCandidate"
+        :open="!!editColumnCandidate"
+        @close="editColumnCandidate = null"
+        @save="(column) => handleUpdateColumn(column)"
+      />
+
+      <!-- Create card dialog -->
+      <DialogCreateCard
+        :key="board.id"
+        :column-id="createCardColumnCandidate"
+        :column-title="columns.find(column => column.id === createCardColumnCandidate)?.title || ''"
+        :open="!!createCardColumnCandidate"
+        @close="() => createCardColumnCandidate = null"
+        @create="(card) => handleCreateCard(card)"
+      />
+
+      <!-- Edit card dialog -->
+      <DialogEditCard
+        :open="!!editCardCandidate"
+        :card="editCardCandidate"
+        @close="() => editCardCandidate = null"
+        @save="(card) => handleUpdateCard(card)"
+        @delete="(cardId) => handleDeleteCard(cardId)"
+      />
+
+    </template>
+
+    <!-- No boards (this should not happen) -->
+    <template v-else>
+      <div class="relative block w-full h-screen overflow-hidden text-slate-700">
+        <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+          <div class="flex items-center justify-center flex-col gap-4 text-base p-8 bg-slate-100 rounded-lg shadow-md">
+            <p class="font-medium text-base">
+              Create your first board
+            </p>
+            <button class="btn btn--primary" @click="() => isCreateDialogOpen = true">
+              Add Board
+            </button>
+          </div>
+        </div>
       </div>
-    </Transition>
+    </template>
 
     <!-- Create board dialog -->
     <DialogCreateBoard
-      :key="board.id"
       :open="isCreateDialogOpen"
       @close="isCreateDialogOpen = false"
       @create="(board) => handleCreateBoard(board)"
-    />
-
-    <!-- Create column dialog -->
-    <DialogCreateColumn
-      :key="board.id"
-      :board-id="board.id"
-      :open="isCreateColumnDialogOpen"
-      @close="isCreateColumnDialogOpen = false"
-      @create="(column) => handleCreateColumn(column)"
-    />
-
-    <!-- Edit column dialog -->
-    <DialogEditColumn
-      :key="board.id"
-      :column="editColumnCandidate"
-      :open="!!editColumnCandidate"
-      @close="editColumnCandidate = null"
-      @save="(column) => handleUpdateColumn(column)"
-    />
-
-    <!-- Create card dialog -->
-    <DialogCreateCard
-      v-if="createCardColumnCandidate"
-      :key="board.id"
-      :column-id="createCardColumnCandidate"
-      :column-title="columns.find(column => column.id === createCardColumnCandidate)?.title || ''"
-      :open="!!createCardColumnCandidate"
-      @close="() => createCardColumnCandidate = null"
-      @create="(card) => handleCreateCard(card)"
-    />
-
-    <DialogEditCard
-      v-if="editCardCandidate"
-      :open="!!editCardCandidate"
-      :card="editCardCandidate"
-      @close="() => editCardCandidate = null"
-      @save="(card) => handleUpdateCard(card)"
     />
 
   </div>
