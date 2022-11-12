@@ -216,61 +216,9 @@ watch(() => props.open, () => {
               Save Changes
             </button>
           </div>
-
         </div>
-
-        <!--
-        <FormGroup>
-          <div class="flex items-center justify-center">
-            <button type="button" class="btn btn--gray w-full max-w-[200px]" >
-              <div class="flex items-center justify-center gap-2 w-full rounded-md">
-                <div>
-                  Add Section
-                </div>
-                <div>
-                  <IconAdd class="w-4 h-4" />
-                </div>
-              </div>
-            </button>
-          </div>
-        </FormGroup>
-        -->
-        <!--
-        <div
-          class="flex flex-col gap-6 w-full mt-6 text-slate-700 pt-6 border-t border-t-gray-200"
-        >
-          <div class="flex items-start gap-2">
-            <div>
-              <IconClock class="w-6 h-6" />
-            </div>
-            <div>
-              <p class="flex items-center gap-1 text-sm tracking-wider font-bold text-slate-700 mb-0">
-                Deadline
-              </p>
-              <p class="font-medium text-sm">
-                December 12th 2022
-              </p>
-            </div>
-          </div>
-          <div class="flex items-start gap-2">
-            <div>
-              <IconClock class="w-6 h-6" />
-            </div>
-            <div>
-              <p class="flex items-center gap-1 text-sm tracking-wider font-bold text-slate-700 mb-0">
-                Date Completed
-              </p>
-              <p class="font-medium text-sm">
-                December 12th 2022
-              </p>
-            </div>
-          </div>
-        </div>
-        -->
       </div>
-
     </template>
-
   </Dialog>
   <DialogLabelManagement
     :open="dialogLabelManagementOpen"

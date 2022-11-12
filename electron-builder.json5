@@ -4,33 +4,30 @@
 {
   "appId": "10979mattfletcher.dev.KanbanBoardOffline",
   "asar": true,
+  "productName": "kanbanboardoffline",
   "directories": {
-    "output": "release/${version}"
+    "buildResources": "dist",
+    "output": "builds/electron-builder",
+    // "output": "release/${version}", // This does not work when using icon
   },
   "files": [
     "dist"
   ],
-  "mac": {
+  /*"mac": {
     "artifactName": "${productName}_${version}.${ext}",
     "target": [
       "dmg"
     ]
-  },
+  },*/
   "win": {
-    "target": [
-      {
-        "target": "nsis",
-        "arch": [
-          "x64"
-        ]
-      }
-    ],
-    "artifactName": "${productName}_${version}.${ext}"
+    "target": "appx",
+    "icon": "icons/logo-1080x1080.png",
+    //"artifactName": "${productName}_${version}.${ext}"
   },
-  "nsis": {
+  /*"nsis": {
     "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false
-  }
+    "deleteAppDataOnUninstall": true
+  }*/
 }

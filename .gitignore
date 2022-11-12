@@ -22,4 +22,5 @@ dist-ssr
 *.sw?
 
 release
+builds
 .vscode/.debug.env

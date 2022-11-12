@@ -48,7 +48,7 @@ watch(() => props.open, async (open) => {
 
   await nextTick()
   const headerHeight = Math.ceil(dialogHeader.value?.getBoundingClientRect().height || 0)
-  contentHeight.value = `calc(100vh - ${headerHeight}px - 4rem)`
+  contentHeight.value = `calc(100vh - ${headerHeight}px - 11.5rem)`
 })
 
 const handleClose = () => {

@@ -1,6 +1,7 @@
 import { release } from 'os'
 import { join } from 'path'
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
+import windowStateKeeper from 'electron-window-state'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1'))
@@ -34,9 +35,18 @@ const url = process.env.VITE_DEV_SERVER_URL as string
 const indexHtml = join(ROOT_PATH.dist, 'index.html')
 
 async function createWindow() {
+  const mainWindowState = windowStateKeeper({
+    defaultWidth: 1000,
+    defaultHeight: 800,
+  })
+
   win = new BrowserWindow({
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: mainWindowState.width,
+    height: mainWindowState.height,
     title: 'Main window',
-    icon: join(ROOT_PATH.public, 'favicon.ico'),
+    // icon: join(ROOT_PATH.public, 'favicon.ico'),
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -47,7 +57,10 @@ async function createWindow() {
     },
     autoHideMenuBar: true,
   })
-  win.maximize()
+
+  mainWindowState.manage(win)
+
+  //  win.maximize()
 
   if (app.isPackaged) {
     win.loadFile(indexHtml)

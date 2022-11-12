@@ -88,7 +88,6 @@ const handleUpdateColumn = (column: ColumnUpdate) => {
 }
 
 const handleDeleteColumnClick = (columnIndex: number) => {
-  console.log(deleteColumnPopoverTriggerRef.value)
   if (!deleteColumnPopoverTriggerRef.value || deleteColumnPopoverTriggerRef.value.length < columnIndex)
     return
 
@@ -101,9 +100,8 @@ const handleDeleteColumn = (columnId: string) => {
 
 const handleCreateCard = (card: CardCreate) => {
   card.order = boardsStore.getColumnCards(card.columnId).length
-  const newCard = boardsStore.createCard(card)
+  boardsStore.createCard(card)
   createCardColumnCandidate.value = null
-  editCardCandidate.value = newCard
 }
 
 const handleUpdateCard = (card: CardUpdate) => {
@@ -224,17 +222,22 @@ const initSortableColumns = () => {
 
 onMounted(() => {
   if (route.params.boardId) {
-    nextTick().then(() => initSortableColumns())
-    nextTick().then(() => initSortableCards())
+    boardsStore.selectedBoardId = route.params.boardId as string
+    nextTick().then(() => {
+      initSortableColumns()
+      initSortableCards()
+    })
     return
   }
 
   const selectedBoard = boardsStore.getBoardById(boardsStore.selectedBoardId)
-  if (selectedBoard)
+  if (selectedBoard) {
     router.push(`/boards/${selectedBoard.id}`)
+    return
+  }
 
-  const nextBoard = boardsStore.boards[0]
-  router.push(`/boards/${nextBoard.id}`)
+  const nextBoard = boardsStore.boards[0] || null
+  router.push(`/boards/${nextBoard?.id}`)
 })
 
 onBeforeUnmount(() => {
@@ -245,8 +248,10 @@ onBeforeUnmount(() => {
 
 // Watch columns length and re-init sortable
 watch(() => columns.value.length, () => {
-  nextTick().then(() => initSortableColumns())
-  nextTick().then(() => initSortableCards())
+  nextTick().then(() => {
+    initSortableColumns()
+    initSortableCards()
+  })
 })
 </script>
 
@@ -270,10 +275,8 @@ watch(() => columns.value.length, () => {
       <header class="relative block w-full text-base z-20 bg-white shadow-md">
         <div class="flex items-center gap-4 w-full h-16 px-4">
           <div>
-            <div class="flex items-center justify-center w-9 h-9 rounded-md bg-primary-500 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-              </svg>
+            <div class="flex items-center justify-center w-8 h-8">
+              <img src="/icons/logo-1080x1080.png" class="w-full h-full object-contain object-center">
             </div>
           </div>
           <div class="shrink-0">
@@ -470,7 +473,7 @@ watch(() => columns.value.length, () => {
                 <div
                   ref="cardRefs"
                   :data-column-id="column.id"
-                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 w-full min-h-[200px]"
+                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 mb-4 w-full min-h-[200px]"
                 >
 
                   <!-- Card -->
@@ -583,8 +586,7 @@ watch(() => columns.value.length, () => {
       <!-- Create card dialog -->
       <DialogCreateCard
         :key="board.id"
-        :column-id="createCardColumnCandidate"
-        :column-title="columns.find(column => column.id === createCardColumnCandidate)?.title || ''"
+        :column-id="createCardColumnCandidate || ''"
         :open="!!createCardColumnCandidate"
         @close="() => createCardColumnCandidate = null"
         @create="(card) => handleCreateCard(card)"

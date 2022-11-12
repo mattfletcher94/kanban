@@ -141,7 +141,7 @@ watch(() => props.open, () => {
               @confirm="() => handleDeleteBoard()"
             >
               <template #trigger>
-                Delete Card
+                Delete Board
               </template>
             </PopoverConfirm>
           </div>

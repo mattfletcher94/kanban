@@ -1,0 +1,45 @@
+/**
+ * @see https://www.electron.build/configuration/configuration
+ */
+{
+  "appId": "10979mattfletcher.dev.KanbanBoardOffline",
+  "asar": true,
+  "productName": "kanbanboardoffline",
+  "appx": {
+    "applicationId": "kanbanboardoffline",
+    "displayName": "Kanban Board Offline",
+    "publisher": "CN=CBBF4864-85B2-4AC9-8FF7-7A71B4E102BC",
+    "publisherDisplayName": "mattfletcher.dev",
+    "identityName": "10979mattfletcher.dev.KanbanBoardOffline",
+    "backgroundColor": "transparent",
+  },
+  "directories": {
+    "buildResources": "dist",
+    "output": "builds/electron-builder",
+    // "output": "release/${version}", // This does not work when using icon
+  },
+  "files": [
+    "dist"
+  ],
+  /*"mac": {
+    "artifactName": "${productName}_${version}.${ext}",
+    "target": [
+      "dmg"
+    ]
+  },*/
+  "win": {
+    //"certificateFile": "C:\\Users\\MattF\\AppData\\Roaming\\electron-windows-store\\CBBF4864-85B2-4AC9-8FF7-7A71B4E102BC\\CBBF4864-85B2-4AC9-8FF7-7A71B4E102BC.pfx",
+    "verifyUpdateCodeSignature": false,
+    //"title": "Kanban Board Offline",
+    "target": "appx",
+    
+    //"icon": "icons/logo-1080x1080.png",
+    "artifactName": "${productName}_${version}.${ext}"
+  },
+  /*"nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": true
+  }*/
+}

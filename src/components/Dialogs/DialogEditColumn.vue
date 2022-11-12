@@ -52,7 +52,7 @@ watch(() => props.open, () => {
 
 <template>
   <Dialog
-    title="Update Column"
+    title="Edit Column"
     width="420px"
     :open="props.open"
     @close="() => onClose()"

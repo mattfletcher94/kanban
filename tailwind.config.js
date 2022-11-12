@@ -2,7 +2,7 @@
 const colors = require('tailwindcss/colors')
 const defaultTheme = require('tailwindcss/defaultTheme')
 
-const primaryColor = colors.indigo
+const primaryColor = colors.blue
 
 module.exports = {
   darkMode: 'class',
