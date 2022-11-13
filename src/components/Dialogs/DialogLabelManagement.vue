@@ -123,7 +123,7 @@ const onClose = () => {
                 </div>
                 <div class="w-full">
                   <input
-                    title="Edit label title"
+                    placeholder="Edit label title"
                     class="label-textfield"
                     type="text"
                     :value="label.title"

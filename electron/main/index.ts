@@ -2,6 +2,7 @@ import { release } from 'os'
 import { join } from 'path'
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
 import windowStateKeeper from 'electron-window-state'
+import contextMenu from 'electron-context-menu'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1'))
@@ -35,6 +36,10 @@ const url = process.env.VITE_DEV_SERVER_URL as string
 const indexHtml = join(ROOT_PATH.dist, 'index.html')
 
 async function createWindow() {
+  contextMenu({
+    showSaveImageAs: true,
+  })
+
   const mainWindowState = windowStateKeeper({
     defaultWidth: 1000,
     defaultHeight: 800,
@@ -76,6 +81,12 @@ async function createWindow() {
     if (url.startsWith('https:'))
       shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  // Open target="_blank" links in the default browser
+  win.webContents.on('new-window', (e, url) => {
+    e.preventDefault()
+    shell.openExternal(url)
   })
 }
 

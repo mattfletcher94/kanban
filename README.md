@@ -2,3 +2,9 @@ npx electron-windows-store --input-directory "C:\Users\MattF\Documents\Code\kanb
 
 
 OVERRIDE THE MANIFEST WITH MY OWN
+
+
+Clean up logos
+- only need my main one, screw the rest.
+- Also need to add in actual app.
+- Including favicon

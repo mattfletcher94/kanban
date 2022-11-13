@@ -21,7 +21,7 @@
   },*/
   "win": {
     "target": "appx",
-    "icon": "icons/logo-1080x1080.png",
+    "icon": "logo-1080x1080.png",
     //"artifactName": "${productName}_${version}.${ext}"
   },
   /*"nsis": {

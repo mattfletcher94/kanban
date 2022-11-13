@@ -13,10 +13,10 @@ import IconAdd from '../components/Icons/IconAdd.vue'
 import IconConfig from '../components/Icons/IconConfig.vue'
 import Dropdown from '../components/Dropdowns/Dropdown.vue'
 import DropdownOption from '../components/Dropdowns/DropdownOption.vue'
-import PopoverEditBoard from '../components/Popovers/PopoverEditBoard.vue'
 import PopoverConfirm from '../components/Popovers/PopoverConfirm.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
+import IconOpen from '../components/Icons/IconOpen.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import { useBoardsStore } from './../stores/boards'
@@ -276,7 +276,7 @@ watch(() => columns.value.length, () => {
         <div class="flex items-center gap-4 w-full h-16 px-4">
           <div>
             <div class="flex items-center justify-center w-8 h-8">
-              <img src="/icons/logo-1080x1080.png" class="w-full h-full object-contain object-center">
+              <img src="/logo-256x256.png" class="w-full h-full object-cover object-center">
             </div>
           </div>
           <div class="shrink-0">
@@ -520,9 +520,30 @@ watch(() => columns.value.length, () => {
                       <div>
                         <div
                           v-if="card.description"
-                          class="prose-card prose-card line-clamp-3"
+                          class="prose-card prose-card line-clamp-2"
                           v-html="card.description"
                         />
+                      </div>
+                      <div
+                        v-if="card.links && card.links.length > 0"
+                        class="flex flex-wrap gap-2 w-full"
+                      >
+                        <div
+                          v-for="link in card.links"
+                          :key="link.id"
+                        >
+                          <a
+                            v-tooltip="{ content: `Open ${link.name} in browser` }"
+                            class="btn btn--gray btn--sm text-xs flex items-center gap-2 !text-slate-500 "
+                            :href="link.url"
+                            target="_blank"
+                          >
+                            <IconOpen class="w-4 h-4" />
+                            <div>
+                              {{ link.name }}
+                            </div>
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>

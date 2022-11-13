@@ -12,6 +12,7 @@ export interface Card {
   labelIds: string[]
   title: string
   description?: string
+  links?: Array<{ id: string; name: string; url: string }>
   order: number
   dateCreated: string
   dateUpdated: string
