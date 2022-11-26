@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
 import { themes } from '../data/themes'
 import { labels as defaultLabels } from '../data/labels'
-import { boards as defaultBoards, columns as defaultColumns } from '../data/boards'
+import { boards as defaultBoards, cards as defaultCards, columns as defaultColumns } from '../data/boards'
 
 export interface Card {
   id: string
@@ -13,6 +13,7 @@ export interface Card {
   title: string
   description?: string
   links?: Array<{ id: string; name: string; url: string }>
+  todos?: Array<{ id: string; description: string; completed: boolean }>
   order: number
   dateCreated: string
   dateUpdated: string
@@ -72,7 +73,7 @@ export const useBoardsStore = defineStore({
   state: () => ({
     boards: useStorage<Board[]>('boards', defaultBoards),
     columns: useStorage<Column[]>('columns', defaultColumns),
-    cards: useStorage<Card[]>('cards', []),
+    cards: useStorage<Card[]>('cards', defaultCards),
     themes,
     labels: useStorage<Label[]>('labels', defaultLabels),
     selectedBoardId: useStorage<string>('selectedBoardId', ''),

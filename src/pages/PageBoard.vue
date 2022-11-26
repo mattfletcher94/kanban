@@ -2,6 +2,7 @@
 import { useRoute, useRouter } from 'vue-router'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
+import { POSITION, useToast } from 'vue-toastification'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCard from '../components/Dialogs/DialogCreateCard.vue'
@@ -25,6 +26,7 @@ import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, Co
 const router = useRouter()
 const route = useRoute()
 const boardsStore = useBoardsStore()
+const toast = useToast()
 
 const board = computed(() => boardsStore.getBoardById((route.params.boardId as string) || ''))
 const theme = computed(() => boardsStore.getThemeById(board.value?.themeId || ''))
@@ -58,16 +60,18 @@ const handleUpdateBoard = (updatedValues: BoardUpdate) => {
 }
 
 const handleDeleteBoard = async () => {
-  isEditBoardDialogOpen.value = false
-
-  if (!board.value)
-    return
-
-  if (boardsStore.boards.length === 1) {
-    alert('You cannot delete the last board.')
+  if (!board.value) {
+    isEditBoardDialogOpen.value = false
     return
   }
 
+  if (boardsStore.boards.length === 1) {
+    toast.error('You cannot delete your last board.', {
+      position: POSITION.TOP_CENTER,
+    })
+    return
+  }
+  isEditBoardDialogOpen.value = false
   boardsStore.deleteBoard(board.value.id)
   const nextBoard = boardsStore.boards[0]
   router.push(`/boards/${nextBoard.id}`)
@@ -280,7 +284,7 @@ watch(() => columns.value.length, () => {
             </div>
           </div>
           <div class="shrink-0">
-            <Dropdown width="100%">
+            <Dropdown>
               <template #trigger>
                 <button class="btn btn--gray flex w-[280px] items-center justify-between font-bold rounded-md h-9">
                   <Transition mode="out-in" name="slide-fade">
@@ -377,7 +381,7 @@ watch(() => columns.value.length, () => {
             :id="column.id"
             :key="column.id"
             :data-column-id="column.id"
-            class="board__columns__column relative text-base shrink-0 basis-[24rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+            class="board__columns__column relative text-base shrink-0 basis-[22rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
           >
             <div class="block w-full">
 
@@ -467,13 +471,13 @@ watch(() => columns.value.length, () => {
               <div
                 class="board__columns__column__cards block w-full overflow-x-hidden overflow-y-auto"
                 :style="{
-                  maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem)`,
+                  maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem - 1rem)`,
                 }"
               >
                 <div
                   ref="cardRefs"
                   :data-column-id="column.id"
-                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 mb-4 w-full min-h-[200px]"
+                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 w-full min-h-[200px]"
                 >
 
                   <!-- Card -->
@@ -518,12 +522,32 @@ watch(() => columns.value.length, () => {
                     <!-- Card body -->
                     <div class="flex flex-col gap-4 mt-4">
                       <div>
+
+                        <!-- Card description -->
                         <div
                           v-if="card.description"
                           class="prose-card prose-card line-clamp-2"
                           v-html="card.description"
                         />
                       </div>
+
+                      <!-- Card todos progress -->
+                      <div
+                        v-if="card.todos && card.todos.length"
+                        class="flex items-center divide-x divide-x-slate-300 border border-slate-300 justify-start w-full h-4 rounded-lg bg-slate-100 overflow-hidden"
+                      >
+                        <div
+                          v-for="todo in card.todos"
+                          :key="todo.id"
+                          class="w-full h-full"
+                          :class="{
+                            'bg-primary-500': todo.completed,
+                            'bg-slate-100': !todo.completed,
+                          }"
+                        />
+                      </div>
+
+                      <!-- Card links -->
                       <div
                         v-if="card.links && card.links.length > 0"
                         class="flex flex-wrap gap-2 w-full"
@@ -546,7 +570,22 @@ watch(() => columns.value.length, () => {
                         </div>
                       </div>
                     </div>
+
                   </div>
+
+                </div>
+                <div class="block w-full px-4 pb-4">
+                  <button
+                    class="btn btn--light w-full h-9 flex items-center gap-2 justify-center font-bold rounded-md"
+                    @click="() => createCardColumnCandidate = column.id"
+                  >
+                    <div>
+                      Add Card
+                    </div>
+                    <div>
+                      <IconAdd class="w-4 h-4" />
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>

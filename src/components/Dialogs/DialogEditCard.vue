@@ -14,6 +14,7 @@ import IconOpen from '../Icons/IconOpen.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
 import DialogLabelManagement from './DialogLabelManagement.vue'
+import Checkbox from './../Inputs/Checkbox.vue'
 
 const props = defineProps<{
   card: Card | null
@@ -28,9 +29,8 @@ const emits = defineEmits<{
 
 const boardsStore = useBoardsStore()
 
-const descriptionRef = ref<HTMLTextAreaElement>()
-const titleRef = ref<HTMLTextAreaElement>()
 const linksList = ref<any>()
+const todosList = ref<any>()
 const dialogLabelManagementOpen = ref(false)
 
 const form = useForm<CardUpdate>({
@@ -41,6 +41,7 @@ const form = useForm<CardUpdate>({
     description: unref(props.card?.description),
     labelIds: unref(props.card?.labelIds || []),
     links: unref(props.card?.links || []),
+    todos: unref(props.card?.todos || []),
   },
   validationSchema: toFormValidator(zod.object({
     columnId: zod.string().min(1, 'Column is required'),
@@ -52,11 +53,22 @@ const title = form.useFieldModel('title')
 const description = form.useFieldModel('description')
 const labelIds = form.useFieldModel('labelIds')
 const links = form.useFieldModel('links')
+const todos = form.useFieldModel('todos')
 
 const onSubmit = form.handleSubmit((values, actions) => {
   // Remove empty links
   if (values.links)
     values.links = values.links.filter(link => link.name || link.url)
+
+  // Remove empty todos and trim description
+  if (values.todos) {
+    values.todos = values.todos
+      .filter(todo => todo.description)
+      .map((todo) => {
+        todo.description = todo.description.trim()
+        return todo
+      })
+  }
 
   emits('save', values)
 })
@@ -67,19 +79,6 @@ const onClose = () => {
 
 const onDeleteCard = () => {
   emits('delete', props.card?.id || '')
-}
-
-const handleResizeTextarea = async () => {
-  if (titleRef.value) {
-    titleRef.value.style.height = '32px'
-    await nextTick()
-    titleRef.value.style.height = `${titleRef.value.scrollHeight + 1}px`
-  }
-  if (descriptionRef.value) {
-    descriptionRef.value.style.height = '32px'
-    await nextTick()
-    descriptionRef.value.style.height = `${descriptionRef.value.scrollHeight + 1}px`
-  }
 }
 
 const handleSelectLabel = (id: string) => {
@@ -125,16 +124,44 @@ const handleDeleteLink = (id: string) => {
   links.value = links.value.filter(x => x.id !== id)
 }
 
+const handleClickAddTodoBtn = async () => {
+  if (!todos.value)
+    todos.value = []
+
+  todos.value.push({
+    id: uuidv4(),
+    description: '',
+    completed: false,
+  })
+
+  // Find last input and focus it
+  await nextTick()
+
+  if (todosList.value && todosList.value.$el) {
+    const lastInput = todosList.value.$el.querySelector('li:last-child input')
+    if (lastInput)
+      lastInput.focus()
+  }
+}
+
+const handleDeleteTodo = (id: string) => {
+  if (!todos.value)
+    todos.value = []
+
+  todos.value = todos.value.filter(x => x.id !== id)
+}
+
+const handleToggleTodoCompleted = (id: string) => {
+  if (!todos.value)
+    todos.value = []
+
+  const todo = todos.value.find(x => x.id === id)
+  if (todo)
+    todo.completed = !todo.completed
+}
+
 const selectedLabels = computed(() => {
   return boardsStore.labels.filter(label => labelIds.value?.includes(label.id))
-})
-
-onMounted(() => {
-  handleResizeTextarea()
-})
-
-watch(() => [titleRef.value, title.value, descriptionRef.value, description.value], () => {
-  handleResizeTextarea()
 })
 
 watch(() => props.open, () => {
@@ -146,6 +173,7 @@ watch(() => props.open, () => {
       description: unref(props.card?.description),
       labelIds: unref(props.card?.labelIds || []),
       links: unref(props.card?.links || []),
+      todos: unref(props.card?.todos || []),
     })
   }
 })
@@ -159,10 +187,10 @@ watch(() => props.open, () => {
   >
     <template #header>
       <div class="flex items-center py-2">
-        <textarea
-          ref="titleRef"
+        <resize-textarea
           v-model="title"
           :rows="1"
+          :min-height="32"
           :spellcheck="false"
           class="textarea--in-place text-lg font-bold mt-1"
           placeholder="Add Title"
@@ -171,65 +199,127 @@ watch(() => props.open, () => {
     </template>
     <template #content>
       <a href="#" />
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-8">
 
         <!-- Labels -->
-        <FormGroup class="px-1">
+        <FormGroup>
           <template #label>
-            <div class="flex items-center justify-between">
-              <div>
-                Labels
-              </div>
+            <div class="">
+              Labels
             </div>
           </template>
-          <div class="flex items-start gap-4">
-            <TransitionGroup
-              class="flex flex-wrap gap-2 w-full"
-              name="vue-list"
-              tag="div"
+          <div
+            class="flex flex-wrap gap-2 w-full"
+          >
+            <CardLabel
+              v-for="label in selectedLabels"
+              :key="label.id"
+              class="h-8"
+              :color="label.color"
+              :title="label.title"
             >
-              <CardLabel
-                v-for="label in selectedLabels"
-                :key="label.id"
-                class="h-8"
-                :color="label.color"
-                :title="label.title"
-              >
-                {{ label.title }}
-              </CardLabel>
-              <button
-                key="button"
-                class="btn btn--gray h-8 flex items-center gap-2 justify-start"
-                @click="() => dialogLabelManagementOpen = true"
-              >
-                <div>
-                  Add Label
-                </div>
-                <div>
-                  <IconAdd class="w-4 h-4" />
-                </div>
-              </button>
-            </TransitionGroup>
+              {{ label.title }}
+            </CardLabel>
+            <button
+              key="button"
+              class="btn btn--gray h-8 flex items-center gap-2 justify-start"
+              @click="() => dialogLabelManagementOpen = true"
+            >
+              <div>
+                Add Label
+              </div>
+              <div>
+                <IconAdd class="w-4 h-4" />
+              </div>
+            </button>
           </div>
         </FormGroup>
 
         <!-- Description -->
         <FormGroup>
           <template #label>
-            <div class="flex items-center px-1">
-              <div class="">
-                Description
-              </div>
-            </div>
+            Description
           </template>
-          <textarea
-            ref="descriptionRef"
+          <resize-textarea
             v-model="description"
-            :rows="1"
             :spellcheck="false"
+            :rows="1"
+            :min-height="32"
             class="textarea--in-place text-base"
             placeholder="No description"
           />
+        </FormGroup>
+
+        <!-- Todos -->
+        <FormGroup>
+          <template #label>
+            <div class="flex items-center px-1">
+              <div class="">
+                To Do List
+                <span v-if="todos && todos.length > 0">
+                  ({{ todos.filter(x => x.completed).length }}/{{ todos.length }})
+                </span>
+              </div>
+            </div>
+          </template>
+          <ul
+            v-if="todos && todos.length"
+            ref="todosList"
+            class="flex flex-col divide-y divide-gray-300 w-full rounded-lg border border-gray-300 overflow-hidden"
+          >
+            <li
+              v-for="(todo) in todos"
+              :key="todo.id"
+              class="flex items-center gap-2 bg-white p-3"
+            >
+              <div class="shrink-0">
+                <Checkbox
+                  :checked="todo.completed"
+                  @change="() => handleToggleTodoCompleted(todo.id)"
+                />
+              </div>
+              <div class="w-full">
+                <resize-textarea
+                  v-model="todo.description"
+                  :class="{
+                    'line-through': todo.completed,
+                  }"
+                  :rows="1"
+                  :min-height="32"
+                  :spellcheck="false"
+                  class="textarea--in-place"
+                  placeholder="Enter description..."
+                />
+              </div>
+              <div class="shrink-0">
+                <PopoverConfirm
+                  trigger-class="btn btn--gray !px-2 !text-slate-500 !py-0 !h-8"
+                  message="Are you sure you want to delete this todo?"
+                  width="240px"
+                  confirm-text="Delete"
+                  cancel-text="Cancel"
+                  @confirm="() => handleDeleteTodo(todo.id)"
+                >
+                  <template #trigger>
+                    <IconBin class="w-4 h-4" />
+                  </template>
+                </PopoverConfirm>
+              </div>
+            </li>
+          </ul>
+          <div>
+            <button
+              class="btn btn--gray h-8 mt-2 flex items-center gap-2 justify-start"
+              @click="() => handleClickAddTodoBtn()"
+            >
+              <div>
+                Add Todo
+              </div>
+              <div>
+                <IconAdd class="w-4 h-4" />
+              </div>
+            </button>
+          </div>
         </FormGroup>
 
         <!-- Links -->
@@ -241,16 +331,15 @@ watch(() => props.open, () => {
               </div>
             </div>
           </template>
-          <TransitionGroup
+          <ul
+            v-if="links && links.length"
             ref="linksList"
-            class="flex flex-col gap-2 w-full"
-            name="vue-list"
-            tag="ul"
+            class="flex flex-col divide-y divide-gray-300 w-full rounded-lg border border-gray-300 overflow-hidden"
           >
             <li
               v-for="(link) in links"
               :key="link.id"
-              class="flex items-center gap-2 bg-white border border-gray-300 p-2 rounded-lg"
+              class="flex items-center gap-2 bg-white p-3"
             >
               <div class="w-full">
                 <input
@@ -293,8 +382,7 @@ watch(() => props.open, () => {
                 </PopoverConfirm>
               </div>
             </li>
-
-          </TransitionGroup>
+          </ul>
           <div>
             <button
               class="btn btn--gray h-8 mt-2 flex items-center gap-2 justify-start"
@@ -309,34 +397,36 @@ watch(() => props.open, () => {
             </button>
           </div>
         </FormGroup>
+      </div>
+    </template>
 
-        <!-- Buttons -->
-        <div class="flex items-center justify-between gap-4 mt-6">
-          <div>
-            <PopoverConfirm
-              trigger-class="text-sm text-red-600 font-medium underline"
-              message="Are you sure you want to delete this Card? This cannot be undone."
-              width="270px"
-              confirm-text="Delete"
-              cancel-text="Cancel"
-              anchor="top-start"
-              @confirm="() => onDeleteCard()"
-            >
-              <template #trigger>
-                Delete Card
-              </template>
-            </PopoverConfirm>
-          </div>
-          <div>
-            <button
-              class="btn btn--primary"
-              type="button"
-              :disabled="!form.meta.value.valid"
-              @click="() => onSubmit()"
-            >
-              Save Changes
-            </button>
-          </div>
+    <template #footer>
+      <!-- Buttons -->
+      <div class="flex items-center justify-between gap-4 px-6 py-4">
+        <div>
+          <PopoverConfirm
+            trigger-class="text-sm text-red-600 font-medium underline"
+            message="Are you sure you want to delete this Card? This cannot be undone."
+            width="270px"
+            confirm-text="Delete"
+            cancel-text="Cancel"
+            anchor="top-start"
+            @confirm="() => onDeleteCard()"
+          >
+            <template #trigger>
+              Delete Card
+            </template>
+          </PopoverConfirm>
+        </div>
+        <div>
+          <button
+            class="btn btn--primary"
+            type="button"
+            :disabled="!form.meta.value.valid"
+            @click="() => onSubmit()"
+          >
+            Save Changes
+          </button>
         </div>
       </div>
     </template>
@@ -365,6 +455,11 @@ watch(() => props.open, () => {
 }
 
 .links-textfield {
+  @apply w-full !p-1 border-transparent bg-transparent font-semibold resize-none ring-1 ring-transparent leading-normal rounded-md overflow-hidden;
+  @apply hover:bg-gray-100 focus:bg-gray-50 focus:ring-1 focus:ring-primary-500;
+}
+
+.todo-description-textfield {
   @apply w-full !p-1 border-transparent bg-transparent font-semibold resize-none ring-1 ring-transparent leading-normal rounded-md overflow-hidden;
   @apply hover:bg-gray-100 focus:bg-gray-50 focus:ring-1 focus:ring-primary-500;
 }

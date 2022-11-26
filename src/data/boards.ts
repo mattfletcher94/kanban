@@ -1,5 +1,5 @@
 import moment from 'moment'
-import type { Board, Column } from '../stores/boards'
+import type { Board, Card, Column } from '../stores/boards'
 
 export const boards: Board[] = [
   {
@@ -41,6 +41,21 @@ export const columns: Column[] = [
     boardId: '1',
     title: 'Done',
     order: 3,
+    dateCreated: moment().format(),
+    dateUpdated: moment().format(),
+  },
+]
+
+export const cards: Card[] = [
+  {
+    id: '1',
+    columnId: '2',
+    labelIds: ['3'],
+    title: 'My first card',
+    description: '',
+    links: [],
+    todos: [],
+    order: 1,
     dateCreated: moment().format(),
     dateUpdated: moment().format(),
   },

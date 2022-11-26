@@ -87,7 +87,7 @@ const handleDeleteBoard = () => {
             state="error"
             :feedback="(form.submitCount.value > 0 && form.errors.value.themeId) || ''"
           >
-            <Dropdown width="100%">
+            <Dropdown>
               <template #trigger>
                 <button type="button" class="select flex items-center gap-4 w-full">
                   <div>

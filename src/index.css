@@ -267,5 +267,16 @@ svg {
   opacity: 0;
 }
 .vue-list-leave-active {
-  position: absolute;
+  display: none;
+}
+
+.Vue-Toastification__toast {
+  padding: 12px 24px!important;
+  min-height: 32px!important;
+}
+.Vue-Toastification__toast-body {
+  @apply !text-sm;
+}
+.Vue-Toastification__toast--error {
+  @apply !bg-red-500;
 }

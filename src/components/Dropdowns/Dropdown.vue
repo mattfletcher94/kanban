@@ -1,44 +1,78 @@
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
 import type { PropType } from 'vue'
+import { Teleport, computed, ref } from 'vue'
+import { usePopper } from '../../composables/usePopper'
 
 const props = defineProps({
   width: {
     type: String,
-    default: '210px',
+    default: undefined,
   },
-  anchor: {
-    type: String as PropType<'left' | 'right'>,
-    default: 'left',
-  },
+})
+
+const [trigger, container] = usePopper({
+  placement: 'bottom',
+  strategy: 'fixed',
+  modifiers: [
+    {
+      name: 'offset',
+      options: {
+        offset: [0, 6],
+      },
+    },
+    {
+      name: 'preventOverflow',
+      options: {
+        padding: 6,
+      },
+    },
+    {
+      name: 'flip',
+      options: {
+        padding: 6,
+      },
+    },
+    {
+      name: 'sameWidth',
+      enabled: true,
+      fn: ({ state }: any) => {
+        state.styles.popper.width = `${props.width ? props.width : state.rects.reference.width}px`
+      },
+      effect({ state }: any) {
+        state.elements.popper.style.width = `${props.width ? props.width : state.elements.reference.offsetWidth}px`
+      },
+      phase: 'beforeWrite',
+      requires: ['computeStyles'],
+    },
+  ],
 })
 </script>
 
 <template>
   <Menu as="div" class="block z-100">
-    <MenuButton as="div">
+    <MenuButton ref="trigger" as="div">
       <slot name="trigger" />
     </MenuButton>
-    <transition
-      enter-active-class="transition duration-100 ease-out"
-      enter-from-class="transform scale-95 opacity-0"
-      enter-to-class="transform scale-100 opacity-100"
-      leave-active-class="transition duration-75 ease-in"
-      leave-from-class="transform scale-100 opacity-100"
-      leave-to-class="transform scale-95 opacity-0"
-    >
+    <Teleport to="body">
       <MenuItems
-        class="!absolute bg-white bg-opacity-90 backdrop-filter backdrop-blur divide-y divide-slate-200 rounded-md shadow-lg overflow-hidden ring-1 ring-black ring-opacity-5 focus:outline-none z-20"
-        :class="{
-          'right-0 origin-top-right': props.anchor === 'right',
-          'left-0 origin-top-left': props.anchor === 'left',
-        }"
-        :style="{
-          width: props.width,
-        }"
+        ref="container"
+        class="z-[99999] bg-white bg-opacity-90 backdrop-filter backdrop-blur divide-y divide-slate-200 rounded-md shadow-lg overflow-hidden ring-1 ring-black ring-opacity-5 focus:outline-none"
       >
         <slot name="options" />
       </MenuItems>
-    </transition>
+    </Teleport>
   </Menu>
 </template>
+
+<style scoped>
+.popover-enter-active,
+.popover-leave-active {
+  transition: opacity 200ms, transform 200ms ease;
+}
+.popover-enter-from,
+.popover-leave-to {
+  opacity: 0;
+  transform: scale(0.75);
+}
+</style>

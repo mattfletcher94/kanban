@@ -37,6 +37,7 @@ const emit = defineEmits<{
 // HTML Refs
 const dialogHeader = ref<null | HTMLElement>(null)
 const dialogContent = ref<null | HTMLElement>(null)
+const dialogFooter = ref<null | HTMLElement>(null)
 
 // COntent height
 const contentHeight = ref('calc(100vh- 4rem')
@@ -48,7 +49,8 @@ watch(() => props.open, async (open) => {
 
   await nextTick()
   const headerHeight = Math.ceil(dialogHeader.value?.getBoundingClientRect().height || 0)
-  contentHeight.value = `calc(100vh - ${headerHeight}px - 11.5rem)`
+  const footerHeight = Math.ceil(dialogFooter.value?.getBoundingClientRect().height || 0)
+  contentHeight.value = `calc(100vh - ${headerHeight}px - ${footerHeight}px - 14rem)`
 })
 
 const handleClose = () => {
@@ -127,6 +129,12 @@ const handleClose = () => {
                   </div>
                 </div>
               </div>
+
+            </div>
+            <div>
+              <div v-if="$slots.footer" ref="dialogFooter" class="dialog-footer">
+                <slot name="footer" />
+              </div>
             </div>
           </div>
         </TransitionChild>
@@ -158,10 +166,20 @@ const handleClose = () => {
     border-b
     border-b-slate-200;
 }
+.dialog-footer {
+  @apply block w-full border-t border-t-slate-200;
+}
 .dialog-content {
   @apply block w-full overflow-y-auto overflow-x-hidden p-6;
 }
-.dialog-footer {
-  @apply block w-full;
+
+.dialog-content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: rgba(255,255,255,0.8);
+}
+.dialog-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.3);
+  @apply rounded-lg;
 }
 </style>
