@@ -49,12 +49,12 @@ export const columns: Column[] = [
 export const cards: Card[] = [
   {
     id: '1',
-    columnId: '2',
-    labelIds: ['3'],
+    columnId: '1',
+    labelIds: ['3', '4'],
     title: 'My first card',
-    description: '',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     links: [],
-    todos: [],
+    todos: undefined,
     order: 1,
     dateCreated: moment().format(),
     dateUpdated: moment().format(),

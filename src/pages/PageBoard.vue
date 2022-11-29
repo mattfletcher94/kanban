@@ -5,7 +5,7 @@ import Sortable from 'sortablejs'
 import { POSITION, useToast } from 'vue-toastification'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
-import DialogCreateCard from '../components/Dialogs/DialogCreateCard.vue'
+import DialogCreateCardMinimal from '../components/Dialogs/DialogCreateCardMinimal.vue'
 import DialogEditCard from '../components/Dialogs/DialogEditCard.vue'
 import DialogEditBoard from '../components/Dialogs/DialogEditBoard.vue'
 import CardLabel from '../components/CardLabel.vue'
@@ -18,6 +18,7 @@ import PopoverConfirm from '../components/Popovers/PopoverConfirm.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
 import IconOpen from '../components/Icons/IconOpen.vue'
+import IconCheck from '../components/Icons/IconCheck.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import { useBoardsStore } from './../stores/boards'
@@ -104,8 +105,9 @@ const handleDeleteColumn = (columnId: string) => {
 
 const handleCreateCard = (card: CardCreate) => {
   card.order = boardsStore.getColumnCards(card.columnId).length
-  boardsStore.createCard(card)
+  const createdCard = boardsStore.createCard(card)
   createCardColumnCandidate.value = null
+  editCardCandidate.value = createdCard
 }
 
 const handleUpdateCard = (card: CardUpdate) => {
@@ -243,6 +245,24 @@ onMounted(() => {
   const nextBoard = boardsStore.boards[0] || null
   router.push(`/boards/${nextBoard?.id}`)
 })
+
+const resolveTodoProgressClass = (card: Card) => {
+  if (!card.todos)
+    return ''
+  const todoCount = card.todos.length
+  const doneCount = card.todos.filter(todo => todo.completed).length
+  const todoPercentage = Math.round((doneCount / todoCount) * 100)
+  if (todoPercentage < 25)
+    return 'bg-red-500'
+  if (todoPercentage >= 25 && todoPercentage < 50)
+    return 'bg-yellow-500'
+  if (todoPercentage >= 50 && todoPercentage < 75)
+    return 'bg-orange-500'
+  if (todoPercentage >= 75 && todoPercentage < 100)
+    return 'bg-blue-500'
+  if (todoPercentage === 100)
+    return 'bg-green-500'
+}
 
 onBeforeUnmount(() => {
   columnsSortableInstance.value?.destroy()
@@ -521,11 +541,11 @@ watch(() => columns.value.length, () => {
 
                     <!-- Card body -->
                     <div class="flex flex-col gap-4 mt-4">
-                      <div>
-
-                        <!-- Card description -->
+                      <!-- Card description -->
+                      <div
+                        v-if="card.description"
+                      >
                         <div
-                          v-if="card.description"
                           class="prose-card prose-card line-clamp-2"
                           v-html="card.description"
                         />
@@ -534,17 +554,25 @@ watch(() => columns.value.length, () => {
                       <!-- Card todos progress -->
                       <div
                         v-if="card.todos && card.todos.length"
-                        class="flex items-center divide-x divide-x-slate-300 border border-slate-300 justify-start w-full h-4 rounded-lg bg-slate-100 overflow-hidden"
+                        v-tooltip="{ content: `${card.todos.filter(x => x.completed).length} of ${card.todos.length} todos completed` }"
                       >
+                        <div class="w-full h-5 bg-gray-300 rounded-full overflow-hidden">
+                          <div
+                            class="absolute top-0 left-0 w-full bg-primary-500 h-full rounded-full  transition-all duration-200"
+                            :style="{
+                              width: `${(card.todos.filter(todo => todo.completed).length / card.todos.length) * 100}%`,
+                            }"
+                          />
+                        </div>
                         <div
-                          v-for="todo in card.todos"
-                          :key="todo.id"
-                          class="w-full h-full"
-                          :class="{
-                            'bg-primary-500': todo.completed,
-                            'bg-slate-100': !todo.completed,
+                          class="absolute flex items-center justify-center top-0 left-0 w-5 h-5 rounded-full bg-primary-600 transition-all duration-200"
+                          :style="{
+                            left: `calc(${(card.todos.filter(todo => todo.completed).length / card.todos.length) * 100}% - 0rem)`,
+                            transform: `translateX(${card.todos.filter(todo => todo.completed).length === 0 ? '0' : '-100%'})`,
                           }"
-                        />
+                        >
+                          <IconCheck class="w-4 h-4 text-white" />
+                        </div>
                       </div>
 
                       <!-- Card links -->
@@ -644,7 +672,7 @@ watch(() => columns.value.length, () => {
       />
 
       <!-- Create card dialog -->
-      <DialogCreateCard
+      <DialogCreateCardMinimal
         :key="board.id"
         :column-id="createCardColumnCandidate || ''"
         :open="!!createCardColumnCandidate"
