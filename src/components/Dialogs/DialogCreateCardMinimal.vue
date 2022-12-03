@@ -3,7 +3,7 @@ import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { unref, watch } from 'vue'
-import type { CardCreate, ColumnCreate } from '../../stores/boards'
+import type { CardCreate } from '../../stores/boards'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
 
@@ -35,7 +35,6 @@ const form = useForm<CardCreate>({
 const title = form.useFieldModel('title')
 
 const onSubmit = form.handleSubmit((values, actions) => {
-  console.log(values)
   emits('create', values)
 })
 
@@ -74,7 +73,7 @@ watch(() => [props.open, props.columnId], () => {
           <input
             v-model="title"
             type="text"
-            placeholder="Enter column name..."
+            placeholder="Enter card name..."
           >
         </FormGroup>
         <div class="flex items-center justify-center gap-4 mt-6">

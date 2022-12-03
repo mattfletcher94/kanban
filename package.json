@@ -1,6 +1,6 @@
 {
   "name": "kanbanboardoffline",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/electron/main/index.js",
   "description": "Simple Offline Kanban Board",
   "author": "Matt Fletcher",
