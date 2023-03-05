@@ -8,26 +8,12 @@
   "directories": {
     "buildResources": "dist",
     "output": "builds/electron-builder",
-    // "output": "release/${version}", // This does not work when using icon
   },
   "files": [
     "dist"
   ],
-  /*"mac": {
-    "artifactName": "${productName}_${version}.${ext}",
-    "target": [
-      "dmg"
-    ]
-  },*/
   "win": {
     "target": "appx",
     "icon": "logo-1080x1080.png",
-    //"artifactName": "${productName}_${version}.${ext}"
   },
-  /*"nsis": {
-    "oneClick": false,
-    "perMachine": false,
-    "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": true
-  }*/
 }
