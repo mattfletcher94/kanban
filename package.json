@@ -31,7 +31,7 @@
     "@vitejs/plugin-vue": "^3.0.1",
     "@vueuse/core": "^9.1.1",
     "autoprefixer": "^10.4.8",
-    "electron": "^20.0.2",
+    "electron": "^23.1.2",
     "electron-builder": "^23.6.0",
     "electron-context-menu": "^3.6.0",
     "electron-windows-store": "^2.1.0",
