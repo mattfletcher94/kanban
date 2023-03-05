@@ -18,3 +18,10 @@ Additional Features:
 - Regular updates with new features.
 
 [View on Microsoft Store](https://apps.microsoft.com/store/detail/kanban-board-offline/9NXK08Z8JDVB?hl=en-gb&gl=gb&rtc=1)
+
+## Tech Stack
+- [Vue 3](https://vuejs.org/) (Frontend Framework)
+- [Pinia](https://pinia.vuejs.org/) (State Management)
+- [Tailwind CSS](https://tailwindcss.com/) (CSS Framework)
+- [Vite](https://vitejs.dev/) (Bundler)
+- [Electron](https://www.electronjs.org/) (Build as Desktop App)  
