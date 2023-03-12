@@ -14,23 +14,27 @@ export const themes: Theme[] = [
     title: 'Abstract Waves',
     image: abstactWavesBg,
     thumbnail: abstactWavesThumbnail,
+    isCustom: false,
   },
   {
     id: '2',
     title: 'Blue Bubbles',
     image: blueBubblesBg,
     thumbnail: blueBubblesThumbnail,
+    isCustom: false,
   },
   {
     id: '3',
     title: 'Forest',
     image: forestBg,
     thumbnail: forestThumbnail,
+    isCustom: false,
   },
   {
     id: '4',
     title: 'Space',
     image: spaceBg,
     thumbnail: spaceThumbnail,
+    isCustom: false,
   },
 ]

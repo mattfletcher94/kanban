@@ -44,7 +44,6 @@ const onClose = () => {
 
 watch(() => [props.open, props.columnId], () => {
   if (props.open) {
-    console.log(props.columnId)
     form.setValues({
       columnId: unref(props.columnId),
       title: '',
@@ -76,7 +75,7 @@ watch(() => [props.open, props.columnId], () => {
             placeholder="Enter card name..."
           >
         </FormGroup>
-        <div class="flex items-center justify-center gap-4 mt-6">
+        <div class="flex items-center justify-end gap-4 mt-6">
           <button class="btn btn--primary" type="submit">
             Create Card
           </button>

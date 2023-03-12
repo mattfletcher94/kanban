@@ -6,7 +6,7 @@
   <Identity Name="10979mattfletcher.dev.KanbanBoardOffline"
     ProcessorArchitecture="x64"
     Publisher="CN=CBBF4864-85B2-4AC9-8FF7-7A71B4E102BC"
-    Version="1.0.3.0" />
+    Version="1.0.4.0" />
   <Properties>
     <DisplayName>Kanban Board | Offline</DisplayName>
     <PublisherDisplayName>mattfletcher.dev</PublisherDisplayName>

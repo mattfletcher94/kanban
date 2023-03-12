@@ -2,14 +2,13 @@
 import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
-import { computed, watch } from 'vue'
-import type { BoardCreate } from '../../stores/boards'
+import { computed, ref, watch } from 'vue'
+import type { BoardCreate, Theme } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import DropdownOption from '../Dropdowns/DropdownOption.vue'
-import Dropdown from '../Dropdowns/Dropdown.vue'
-import IconChevonDown from '../Icons/IconChevonDown.vue'
+import DropdownThemes from '../Dropdowns/DropdownThemes.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
+import DialogCreateTheme from './DialogCreateTheme.vue'
 
 const props = defineProps<{
   open: boolean
@@ -36,11 +35,16 @@ const form = useForm<BoardCreate>({
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
 
-const selectedTheme = computed(() => boardsStore.getThemeById(themeId.value))
+const isCreateThemeDialogOpen = ref(false)
 
 const onSubmit = form.handleSubmit((values, actions) => {
   emits('create', values)
 })
+
+const onCreateTheme = (theme: Theme) => {
+  isCreateThemeDialogOpen.value = false
+  themeId.value = theme.id
+}
 
 const onClose = () => {
   emits('close')
@@ -54,7 +58,7 @@ watch(() => props.open, () => {
 <template>
   <Dialog
     title="Create Board"
-    width="420px"
+    width="480px"
     :open="props.open"
     @close="() => onClose()"
   >
@@ -77,46 +81,22 @@ watch(() => props.open, () => {
           state="error"
           :feedback="(form.submitCount.value > 0 && form.errors.value.themeId) || ''"
         >
-          <Dropdown>
-            <template #trigger>
-              <button type="button" class="select flex items-center gap-4 w-full">
-                <div>
-                  <div
-                    class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                    :style="{ backgroundImage: `url(${selectedTheme?.thumbnail})` }"
-                  />
-                </div>
-                <div>
-                  {{ selectedTheme?.title || 'Select theme...' }}
-                </div>
-                <div class="ml-auto">
-                  <IconChevonDown class="w-4 h-4" />
-                </div>
-              </button>
-            </template>
-            <template #options>
-              <DropdownOption
-                v-for="theme in boardsStore.themes"
-                :key="theme.id"
-                :selected="theme.id === themeId"
-                @click="() => form.setFieldValue('themeId', theme.id)"
-              >
-                <div class="flex items-center gap-4 w-full">
-                  <div>
-                    <div
-                      class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                      :style="{ backgroundImage: `url(${theme.thumbnail})` }"
-                    />
-                  </div>
-                  <div>
-                    {{ theme.title }}
-                  </div>
-                </div>
-              </DropdownOption>
-            </template>
-          </Dropdown>
+          <DropdownThemes
+            :selected="themeId"
+            :allow-delete="true"
+            @select="(id) => themeId = id"
+          />
         </FormGroup>
-        <div class="flex items-center justify-center gap-4 mt-12">
+        <div class="mt-4">
+          <button
+            type="button"
+            class="btn btn--gray w-full"
+            @click="() => isCreateThemeDialogOpen = true"
+          >
+            Create a custom theme
+          </button>
+        </div>
+        <div class="flex items-center justify-end gap-4 mt-12">
           <button class="btn btn--primary " type="submit">
             Create Board
           </button>
@@ -124,4 +104,9 @@ watch(() => props.open, () => {
       </form>
     </template>
   </Dialog>
+  <DialogCreateTheme
+    :open="isCreateThemeDialogOpen"
+    @create="(theme) => onCreateTheme(theme)"
+    @close="isCreateThemeDialogOpen = false"
+  />
 </template>

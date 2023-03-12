@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
-import type { PropType } from 'vue'
-import { Teleport, computed, ref } from 'vue'
+import { Menu, MenuButton, MenuItems } from '@headlessui/vue'
+import { Teleport } from 'vue'
 import { usePopper } from '../../composables/usePopper'
 
 const props = defineProps({
@@ -57,7 +56,7 @@ const [trigger, container] = usePopper({
     <Teleport to="body">
       <MenuItems
         ref="container"
-        class="z-[99999] bg-white bg-opacity-90 backdrop-filter backdrop-blur divide-y divide-slate-200 rounded-md shadow-lg overflow-hidden ring-1 ring-black ring-opacity-5 focus:outline-none"
+        class="z-[99999] max-h-[300px] overflow-y-auto overflow-x-hidden bg-white bg-opacity-90 backdrop-filter backdrop-blur divide-y divide-slate-200 rounded-md shadow-lg overflow-hidden ring-1 ring-black ring-opacity-5 focus:outline-none"
       >
         <slot name="options" />
       </MenuItems>

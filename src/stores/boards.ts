@@ -42,6 +42,9 @@ export interface Theme {
   title: string
   image: string
   thumbnail: string
+  isCustom?: boolean
+  dateCreated?: string
+  dateUpdated?: string
 }
 
 export interface Label {
@@ -68,13 +71,17 @@ export type LabelCreate = Omit<Label, 'id' | 'dateCreated' | 'dateUpdated'>
 
 export type LabelUpdate = Partial<Omit<Label, 'id' | 'dateCreated' | 'dateUpdated'>> & Pick<Label, 'id'>
 
+export type ThemeCreate = Omit<Theme, 'id' | 'isCustom'>
+
+export type ThemeUpdate = Partial<Omit<Theme, 'id'>> & Pick<Theme, 'id' | 'isCustom'>
+
 export const useBoardsStore = defineStore({
   id: 'boards',
   state: () => ({
     boards: useStorage<Board[]>('boards', defaultBoards),
     columns: useStorage<Column[]>('columns', defaultColumns),
     cards: useStorage<Card[]>('cards', defaultCards),
-    themes,
+    themes: useStorage<Theme[]>('themes', themes),
     labels: useStorage<Label[]>('labels', defaultLabels),
     selectedBoardId: useStorage<string>('selectedBoardId', ''),
   }),
@@ -95,6 +102,7 @@ export const useBoardsStore = defineStore({
     },
     getLabels: state => state.labels,
     getLabelById: state => (id: string) => state.labels.find(label => label.id === id),
+    getThemes: state => state.themes,
     getThemeById: state => (id: string) => state.themes.find(theme => theme.id === id),
   },
   actions: {
@@ -222,6 +230,48 @@ export const useBoardsStore = defineStore({
 
       // Remove label
       this.labels = this.labels.filter(({ id }) => id !== labelId)
+    },
+
+    createTheme(theme: ThemeCreate) {
+      const entity = {
+        id: uuidv4(),
+        isCustom: true,
+        dateCreated: moment().format(),
+        dateUpdated: moment().format(),
+        ...theme,
+      }
+      this.themes.push(entity)
+      return entity
+    },
+    updateTheme(theme: ThemeUpdate) {
+      const themeFound = this.themes.find(({ id }) => id === theme.id)
+
+      // Dont allow updating default themes
+      if (themeFound && !themeFound.isCustom)
+        return
+
+      const index = this.themes.findIndex(({ id }) => id === theme.id)
+      this.themes[index] = {
+        ...this.themes[index],
+        ...theme,
+        dateUpdated: moment().format(),
+      }
+    },
+    deleteTheme(themeId: string) {
+      const theme = this.themes.find(({ id }) => id === themeId)
+
+      // Dont allow deleting default themes
+      if (theme && !theme.isCustom)
+        return
+
+      // Remove theme from boards
+      this.boards = this.boards.map(board => ({
+        ...board,
+        themeId: board.themeId === themeId ? this.themes[0].id : board.themeId,
+      }))
+
+      // Remove theme
+      this.themes = this.themes.filter(({ id }) => id !== themeId)
     },
 
   },

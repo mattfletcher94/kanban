@@ -1,8 +1,9 @@
 import { release } from 'os'
 import { join } from 'path'
-import { BrowserWindow, app, ipcMain, shell } from 'electron'
+import { BrowserWindow, app, ipcMain, protocol, shell } from 'electron'
 import windowStateKeeper from 'electron-window-state'
 import contextMenu from 'electron-context-menu'
+import { deleteImage, selectImage, uploadImage } from './handles'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1'))
@@ -23,9 +24,7 @@ if (!app.requestSingleInstanceLock()) {
 // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 export const ROOT_PATH = {
-  // /dist
   dist: join(__dirname, '../..'),
-  // /dist or /public
   public: join(__dirname, app.isPackaged ? '../..' : '../../../public'),
 }
 
@@ -36,6 +35,14 @@ const url = process.env.VITE_DEV_SERVER_URL as string
 const indexHtml = join(ROOT_PATH.dist, 'index.html')
 
 async function createWindow() {
+  // Register a custom protocol called "app" that maps to the app's userData directory
+  protocol.registerFileProtocol('app', (request, callback) => {
+    // Strip off "app://"
+    const url = request.url.substr(6)
+    const filePath = join(app.getPath('userData'), url)
+    callback({ path: filePath })
+  })
+
   contextMenu({
     showSaveImageAs: true,
   })
@@ -51,22 +58,15 @@ async function createWindow() {
     width: mainWindowState.width,
     height: mainWindowState.height,
     title: 'Main window',
-    // icon: join(ROOT_PATH.public, 'favicon.ico'),
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
       nodeIntegration: false,
-      contextIsolation: false,
+      contextIsolation: true,
     },
     autoHideMenuBar: true,
   })
 
   mainWindowState.manage(win)
-
-  //  win.maximize()
-
   if (app.isPackaged) {
     win.loadFile(indexHtml)
   }
@@ -116,18 +116,7 @@ app.on('activate', () => {
     createWindow()
 })
 
-// new window example arg: new windows url
-ipcMain.handle('open-win', (event, arg) => {
-  const childWindow = new BrowserWindow({
-    webPreferences: {
-      preload,
-    },
-  })
+ipcMain.handle('select-image', selectImage)
+ipcMain.handle('upload-image', uploadImage)
+ipcMain.handle('delete-image', deleteImage)
 
-  if (app.isPackaged)
-    childWindow.loadFile(indexHtml, { hash: arg })
-
-  else
-    childWindow.loadURL(`${url}/#${arg}`)
-    // childWindow.webContents.openDevTools({ mode: "undocked", activate: true })
-})

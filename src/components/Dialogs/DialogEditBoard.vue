@@ -2,14 +2,13 @@
 import { toFormValidator } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
-import { computed, unref, watch } from 'vue'
-import type { Board, BoardUpdate, Column, ColumnCreate, ColumnUpdate, Theme } from '../../stores/boards'
-import Dropdown from '../Dropdowns/Dropdown.vue'
-import DropdownOption from '../Dropdowns/DropdownOption.vue'
+import { computed, ref, unref, watch } from 'vue'
+import type { Board, BoardUpdate, Theme } from '../../stores/boards'
 import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
-import IconChevonDown from '../Icons/IconChevonDown.vue'
+import DropdownThemes from '../Dropdowns/DropdownThemes.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
+import DialogCreateTheme from './DialogCreateTheme.vue'
 
 const props = defineProps<{
   open: boolean
@@ -37,19 +36,15 @@ const form = useForm<BoardUpdate>({
 
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
+const isCreateThemeDialogOpen = ref(false)
 
-const selectedTheme = computed(() => props.themes.find(t => t.id === themeId.value))
-
-const onSubmit = form.handleSubmit((values, actions) => {
+const onSubmit = form.handleSubmit((values) => {
   emit('save', values)
 })
 
-const handleDeleteBoard = () => {
-  emit('delete', props.board.id)
-}
-
-const onClose = () => {
-  emit('close')
+const onCreateTheme = (theme: Theme) => {
+  isCreateThemeDialogOpen.value = false
+  themeId.value = theme.id
 }
 
 watch(() => props.open, () => {
@@ -66,9 +61,9 @@ watch(() => props.open, () => {
 <template>
   <Dialog
     title="Edit Board"
-    width="420px"
+    width="480px"
     :open="props.open"
-    @close="() => onClose()"
+    @close="() => emit('close')"
   >
     <template #content>
       <form @submit.prevent="() => onSubmit()">
@@ -85,50 +80,25 @@ watch(() => props.open, () => {
         </FormGroup>
         <FormGroup
           class="mt-6"
-          label="Theme"
+          label="Select Theme"
           state="error"
           :feedback="(form.submitCount.value > 0 && form.errors.value.themeId) || ''"
         >
-          <Dropdown>
-            <template #trigger>
-              <button type="button" class="select flex items-center gap-4 w-full">
-                <div>
-                  <div
-                    class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                    :style="{ backgroundImage: `url(${selectedTheme?.thumbnail})` }"
-                  />
-                </div>
-                <div>
-                  {{ selectedTheme?.title || 'Select theme...' }}
-                </div>
-                <div class="ml-auto">
-                  <IconChevonDown class="w-4 h-4" />
-                </div>
-              </button>
-            </template>
-            <template #options>
-              <DropdownOption
-                v-for="theme in themes"
-                :key="theme.id"
-                :selected="theme.id === themeId"
-                @click="() => form.setFieldValue('themeId', theme.id)"
-              >
-                <div class="flex items-center gap-4 w-full">
-                  <div>
-                    <div
-                      class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                      :style="{ backgroundImage: `url(${theme.thumbnail})` }"
-                    />
-                  </div>
-                  <div>
-                    {{ theme.title }}
-                  </div>
-                </div>
-              </DropdownOption>
-            </template>
-          </Dropdown>
+          <DropdownThemes
+            :selected="themeId || ''"
+            :allow-delete="true"
+            @select="(id) => themeId = id"
+          />
         </FormGroup>
-
+        <div class="mt-4">
+          <button
+            type="button"
+            class="btn btn--gray w-full"
+            @click="() => isCreateThemeDialogOpen = true"
+          >
+            Create a custom theme
+          </button>
+        </div>
         <div class="flex items-center justify-between gap-4 mt-12">
           <div>
             <PopoverConfirm
@@ -138,7 +108,7 @@ watch(() => props.open, () => {
               confirm-text="Delete"
               cancel-text="Cancel"
               anchor="top-start"
-              @confirm="() => handleDeleteBoard()"
+              @confirm="() => emit('delete', props.board.id)"
             >
               <template #trigger>
                 Delete Board
@@ -158,5 +128,10 @@ watch(() => props.open, () => {
       </form>
     </template>
   </Dialog>
+  <DialogCreateTheme
+    :open="isCreateThemeDialogOpen"
+    @create="(theme) => onCreateTheme(theme)"
+    @close="isCreateThemeDialogOpen = false"
+  />
 </template>
 

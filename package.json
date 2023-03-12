@@ -1,6 +1,6 @@
 {
   "name": "kanbanboardoffline",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "dist/electron/main/index.js",
   "description": "Simple Offline Kanban Board",
   "author": "Matt Fletcher",
@@ -34,6 +34,7 @@
     "electron": "^20.0.2",
     "electron-builder": "^23.6.0",
     "electron-context-menu": "^3.6.0",
+    "electron-window-state": "^5.0.3",
     "electron-windows-store": "^2.1.0",
     "equal-vue": "^0.79.3",
     "eslint": "^8.23.0",
@@ -70,8 +71,5 @@
     "vite",
     "vue3",
     "vue"
-  ],
-  "dependencies": {
-    "electron-window-state": "^5.0.3"
-  }
+  ]
 }

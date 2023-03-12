@@ -63,7 +63,7 @@ watch(() => props.open, () => {
             placeholder="Enter column name..."
           >
         </FormGroup>
-        <div class="flex items-center justify-center gap-4 mt-6">
+        <div class="flex items-center justify-end gap-4 mt-6">
           <button class="btn btn--primary" type="submit">
             Create Column
           </button>
