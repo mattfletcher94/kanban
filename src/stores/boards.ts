@@ -32,6 +32,12 @@ export interface Board {
   id: string
   themeId: string
   title: string
+  viewSettings?: {
+    hideLabels?: boolean
+    hideDescription?: boolean
+    hideLinks?: boolean
+    hideTodos?: boolean
+  }
   description?: string
   dateCreated: string
   dateUpdated: string

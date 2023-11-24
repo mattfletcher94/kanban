@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { watch } from 'vue'
@@ -23,9 +23,10 @@ const form = useForm<ColumnCreate>({
     title: '',
     order: 0,
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
     boardId: zod.string().min(1, 'Board is required'),
     title: zod.string().min(1, 'Name is required'),
+    order: zod.number().default(0),
   })),
 })
 

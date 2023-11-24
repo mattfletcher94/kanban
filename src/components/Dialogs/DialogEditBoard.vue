@@ -1,11 +1,12 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { computed, ref, unref, watch } from 'vue'
 import type { Board, BoardUpdate, Theme } from '../../stores/boards'
 import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
 import DropdownThemes from '../Dropdowns/DropdownThemes.vue'
+import Switch from '../Inputs/Switch.vue'
 import Dialog from './Dialog.vue'
 import FormGroup from './../FormGroup.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
@@ -28,7 +29,8 @@ const form = useForm<BoardUpdate>({
     title: unref(props.board.title),
     themeId: unref(props.board.themeId),
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
+    id: zod.string().min(1, 'Id is required'),
     title: zod.string().min(1, 'Title is required'),
     themeId: zod.string().min(1, 'Theme is required'),
   })),
@@ -36,6 +38,7 @@ const form = useForm<BoardUpdate>({
 
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
+const viewSettings = form.useFieldModel('viewSettings')
 const isCreateThemeDialogOpen = ref(false)
 
 const onSubmit = form.handleSubmit((values) => {
@@ -87,7 +90,7 @@ watch(() => props.open, () => {
           <DropdownThemes
             :selected="themeId || ''"
             :allow-delete="true"
-            @select="(id) => themeId = id"
+            @select="(id: string) => themeId = id"
           />
         </FormGroup>
         <div class="mt-4">
@@ -130,7 +133,7 @@ watch(() => props.open, () => {
   </Dialog>
   <DialogCreateTheme
     :open="isCreateThemeDialogOpen"
-    @create="(theme) => onCreateTheme(theme)"
+    @create="(theme: Theme) => onCreateTheme(theme)"
     @close="isCreateThemeDialogOpen = false"
   />
 </template>

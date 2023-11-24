@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { unref, watch } from 'vue'
@@ -26,9 +26,13 @@ const form = useForm<CardCreate>({
     todos: [],
     order: 0,
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
     columnId: zod.string().min(1, 'Column is required'),
     title: zod.string().min(1, 'Title is required'),
+    labelIds: zod.array(zod.string()).default([]),
+    links: zod.array(zod.string()).default([]),
+    todos: zod.array(zod.string()).default([]),
+    order: zod.number().default(0),
   })),
 })
 

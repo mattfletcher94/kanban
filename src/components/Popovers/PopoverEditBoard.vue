@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import type { Board, BoardUpdate, Theme } from 'src/stores/boards'
@@ -37,7 +37,8 @@ const form = useForm<BoardUpdate>({
     title: unref(props.board.title),
     themeId: unref(props.board.themeId),
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
+    id: zod.string().min(1, 'Id is required'),
     title: zod.string().min(1, 'Title is required'),
     themeId: zod.string().min(1, 'Theme is required'),
   })),

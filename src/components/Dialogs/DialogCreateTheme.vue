@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { watch } from 'vue'
@@ -28,7 +28,7 @@ const form = useForm<ThemeCreate>({
     image: '',
     thumbnail: '',
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
     title: zod.string().min(1, 'Title is required'),
     image: zod.string().min(1, 'Image is required'),
     thumbnail: zod.string(),

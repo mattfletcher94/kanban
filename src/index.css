@@ -27,7 +27,7 @@
 
   /** Secondary button */
   .btn.btn--secondary {
-    @apply bg-primary-100 text-primary-500 hover:bg-primary-200 focus-within:outline-primary-500;
+    @apply bg-primary-100 text-primary-500 hover:bg-primary-200 focus:outline-primary-500;
   }
 
   .btn.btn--gray {
@@ -41,7 +41,7 @@
 
   /** Danger button */
   .btn.btn--danger {
-    @apply bg-red-500 text-white hover:bg-red-600 focus-within:outline-red-500;
+    @apply bg-red-500 text-white hover:bg-red-600 focus:outline-red-500;
   }
 
   /** Disabled button */
@@ -162,7 +162,8 @@
       prose-h4:text-xs
       prose-p:text-sm
       prose-ul:text-sm
-      prose-li:text-sm;
+      prose-li:text-sm
+      text-sm;
   }
 
   .prose-card > *:last-child {

@@ -3,11 +3,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
 import { POSITION, useToast } from 'vue-toastification'
+import IconEye from '../components/Icons/IconEye.vue'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCardMinimal from '../components/Dialogs/DialogCreateCardMinimal.vue'
 import DialogEditCard from '../components/Dialogs/DialogEditCard.vue'
 import DialogEditBoard from '../components/Dialogs/DialogEditBoard.vue'
+import DialogViewSettings from '../components/Dialogs/DialogViewSettings.vue'
 import CardLabel from '../components/CardLabel.vue'
 import IconChevonDown from '../components/Icons/IconChevonDown.vue'
 import IconAdd from '../components/Icons/IconAdd.vue'
@@ -21,6 +23,7 @@ import IconOpen from '../components/Icons/IconOpen.vue'
 import IconCheck from '../components/Icons/IconCheck.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
+import Checkbox from '../components/Inputs/Checkbox.vue'
 import { useBoardsStore } from './../stores/boards'
 import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
 
@@ -39,6 +42,7 @@ const deleteColumnPopoverTriggerRef = ref<HTMLElement[]>()
 const isCreateDialogOpen = ref(false)
 const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
+const isViewSettingsDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
 const createCardColumnCandidate = ref<string | null>(null)
 
@@ -55,6 +59,7 @@ const handleCreateBoard = (board: BoardCreate) => {
 
 const handleUpdateBoard = (updatedValues: BoardUpdate) => {
   isEditBoardDialogOpen.value = false
+  isViewSettingsDialogOpen.value = false
   if (!board.value)
     return
   boardsStore.updateBoard(updatedValues)
@@ -136,6 +141,7 @@ const initSortableCards = () => {
       dataIdAttr: 'data-card-id',
       draggable: '.board__columns__column__cards__card',
       chosenClass: 'board__columns__column__cards__card--chosen',
+      delay: 75,
       async onEnd(this: Sortable, evt) {
         if (!board.value)
           return
@@ -212,6 +218,7 @@ const initSortableColumns = () => {
     dataIdAttr: 'data-column-id',
     chosenClass: 'board__columns__column--chosen',
     direction: 'horizontal',
+    delay: 75,
     onEnd(this: Sortable) {
       const orders = this.toArray()
       const columns = boardsStore.getBoardColumns(board.value?.id || '')
@@ -246,22 +253,23 @@ onMounted(() => {
   router.push(`/boards/${nextBoard?.id}`)
 })
 
-const resolveTodoProgressClass = (card: Card) => {
-  if (!card.todos)
-    return ''
-  const todoCount = card.todos.length
-  const doneCount = card.todos.filter(todo => todo.completed).length
-  const todoPercentage = Math.round((doneCount / todoCount) * 100)
-  if (todoPercentage < 25)
-    return 'bg-red-500'
-  if (todoPercentage >= 25 && todoPercentage < 50)
-    return 'bg-yellow-500'
-  if (todoPercentage >= 50 && todoPercentage < 75)
-    return 'bg-orange-500'
-  if (todoPercentage >= 75 && todoPercentage < 100)
-    return 'bg-blue-500'
-  if (todoPercentage === 100)
-    return 'bg-green-500'
+const handleToggleTodoCompleted = (cardId: string, todoId: string) => {
+  const card = boardsStore.getCardById(cardId)
+  if (!card)
+    return
+  const todos = card?.todos || []
+  const updatedTodos = todos.map((todo) => {
+    if (todo.id !== todoId)
+      return todo
+    return {
+      ...todo,
+      completed: !todo.completed,
+    }
+  })
+  boardsStore.updateCard({
+    ...card,
+    todos: updatedTodos,
+  })
 }
 
 onBeforeUnmount(() => {
@@ -352,7 +360,7 @@ watch(() => columns.value.length, () => {
               </template>
             </Dropdown>
           </div>
-          <div class="ml-auto">
+          <div class="ml-auto flex items-center gap-2">
             <button
               class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
               @click="() => isCreateColumnDialogOpen = true"
@@ -364,8 +372,6 @@ watch(() => columns.value.length, () => {
                 <IconAdd class="w-4 h-4" />
               </div>
             </button>
-          </div>
-          <div>
             <button
               class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
               @click="() => isEditBoardDialogOpen = true"
@@ -375,6 +381,17 @@ watch(() => columns.value.length, () => {
               </div>
               <div>
                 <IconConfig class="w-4 h-4" />
+              </div>
+            </button>
+            <button
+              class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
+              @click="() => isViewSettingsDialogOpen = true"
+            >
+              <div>
+                View settings
+              </div>
+              <div>
+                <IconEye class="w-4 h-4" />
               </div>
             </button>
           </div>
@@ -501,13 +518,12 @@ watch(() => columns.value.length, () => {
                 >
 
                   <!-- Card -->
-                  <div
+                  <button
                     v-for="card in boardsStore.getColumnCards(column.id)"
                     :id="card.id"
                     :key="card.id"
                     :data-card-id="card.id"
-                    :data-column-id="column.id"
-                    class="board__columns__column__cards__card rounded-lg p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab"
+                    class="board__columns__column__cards__card rounded-lg relative p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab text-left"
                     @click="() => editCardCandidate = card"
                   >
 
@@ -524,7 +540,7 @@ watch(() => columns.value.length, () => {
 
                     <!-- Card Labels -->
                     <div
-                      v-if="card.labelIds && card.labelIds.length"
+                      v-if="card.labelIds && card.labelIds.length && board.viewSettings?.hideLabels !== true"
                       class="flex flex-wrap gap-2 w-full items-center mt-2"
                       name="vue-list"
                       tag="div"
@@ -543,41 +559,43 @@ watch(() => columns.value.length, () => {
                     <div class="flex flex-col gap-4 mt-4">
                       <!-- Card description -->
                       <div
-                        v-if="card.description"
+                        v-if="card.description && board.viewSettings?.hideDescription !== true"
                       >
                         <div
-                          class="prose-card prose-card line-clamp-2"
+                          class="prose-card--sm line-clamp-6"
                           v-html="card.description"
                         />
                       </div>
 
-                      <!-- Card todos progress -->
-                      <div
-                        v-if="card.todos && card.todos.length"
-                        v-tooltip="{ content: `${card.todos.filter(x => x.completed).length} of ${card.todos.length} todos completed` }"
+                      <ul
+                        v-if="card.todos && card.todos.length && board.viewSettings?.hideTodos !== true"
+                        ref="todosList"
+                        class="flex flex-col divide-y divide-gray-200 w-full rounded-lg border border-gray-200 bg-slate-50 overflow-hidden max-h-[300px] overflow-x-hidden overflow-y-auto"
                       >
-                        <div class="w-full h-5 bg-gray-300 rounded-full overflow-hidden">
-                          <div
-                            class="absolute top-0 left-0 w-full bg-primary-500 h-full rounded-full  transition-all duration-200"
-                            :style="{
-                              width: `${(card.todos.filter(todo => todo.completed).length / card.todos.length) * 100}%`,
-                            }"
-                          />
-                        </div>
-                        <div
-                          class="absolute flex items-center justify-center top-0 left-0 w-5 h-5 rounded-full bg-primary-600 transition-all duration-200"
-                          :style="{
-                            left: `calc(${(card.todos.filter(todo => todo.completed).length / card.todos.length) * 100}% - 0rem)`,
-                            transform: `translateX(${card.todos.filter(todo => todo.completed).length === 0 ? '0' : '-100%'})`,
-                          }"
+                        <li
+                          v-for="(todo) in card.todos"
+                          :key="todo.id"
+                          class="flex items-center"
+                          @click="(e) => e.stopPropagation()"
                         >
-                          <IconCheck class="w-4 h-4 text-white" />
-                        </div>
-                      </div>
+                          <div class="w-full">
+                            <Checkbox
+                              class="p-2 w-full hover:bg-primary-50 transition-colors"
+                              size="sm"
+                              :checked="todo.completed"
+                              @change="(value) => handleToggleTodoCompleted(card.id, todo.id)"
+                            >
+                              <span :class="{ 'line-through': todo.completed }">
+                                {{ todo.description }}
+                              </span>
+                            </Checkbox>
+                          </div>
+                        </li>
+                      </ul>
 
                       <!-- Card links -->
                       <div
-                        v-if="card.links && card.links.length > 0"
+                        v-if="card.links && card.links.length > 0 && board.viewSettings?.hideLinks !== true"
                         class="flex flex-wrap gap-2 w-full"
                       >
                         <div
@@ -599,7 +617,7 @@ watch(() => columns.value.length, () => {
                       </div>
                     </div>
 
-                  </div>
+                  </button>
 
                 </div>
                 <div class="block w-full px-4 pb-4">
@@ -651,6 +669,14 @@ watch(() => columns.value.length, () => {
         @save="(board) => handleUpdateBoard(board)"
         @delete="(boardId) => handleDeleteBoard()"
         @close="() => isEditBoardDialogOpen = false"
+      />
+
+      <!-- View settings dialog -->
+      <DialogViewSettings
+        :board="board"
+        :open="isViewSettingsDialogOpen"
+        @save="(board) => handleUpdateBoard(board)"
+        @close="() => isViewSettingsDialogOpen = false"
       />
 
       <!-- Create column dialog -->
@@ -741,6 +767,7 @@ watch(() => columns.value.length, () => {
 }
 
 .board__columns__column__cards__card--chosen,
+.board__columns__column__cards__card:focus-visible,
 .board__columns__column--chosen {
   @apply !outline-orange-500;
 }

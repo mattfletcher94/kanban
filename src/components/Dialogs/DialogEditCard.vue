@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { toFormValidator } from '@vee-validate/zod'
+import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { computed, nextTick, onMounted, ref, unref, watch } from 'vue'
@@ -43,9 +43,22 @@ const form = useForm<CardUpdate>({
     links: unref(props.card?.links || []),
     todos: unref(props.card?.todos || []),
   },
-  validationSchema: toFormValidator(zod.object({
+  validationSchema: toTypedSchema(zod.object({
+    id: zod.string().min(1, 'ID is required'),
     columnId: zod.string().min(1, 'Column is required'),
     title: zod.string().min(1, 'Title is required'),
+    description: zod.string().optional().default(''),
+    labelIds: zod.array(zod.string()).optional().default([]),
+    links: zod.array(zod.object({
+      id: zod.string().min(1, 'ID is required'),
+      name: zod.string().optional().default(''),
+      url: zod.string().optional().default(''),
+    })).optional().default([]),
+    todos: zod.array(zod.object({
+      id: zod.string().min(1, 'ID is required'),
+      description: zod.string().optional().default(''),
+      completed: zod.boolean().optional().default(false),
+    })).optional().default([]),
   })),
 })
 
