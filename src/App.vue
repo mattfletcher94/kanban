@@ -5,7 +5,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <main class="relative block w-full min-h-screen">
+  <main class="app relative block w-full min-h-screen">
     <div
       class="
       hidden

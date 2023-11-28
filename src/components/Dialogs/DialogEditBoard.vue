@@ -4,12 +4,17 @@ import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { computed, ref, unref, watch } from 'vue'
 import type { Board, BoardUpdate, Theme } from '../../stores/boards'
-import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
-import DropdownThemes from '../Dropdowns/DropdownThemes.vue'
-import Switch from '../Inputs/Switch.vue'
+import { useBoardsStore } from '../../stores/boards'
+import IconBin from '../Icons/IconBin.vue'
+import IconEllipsis from '../Icons/IconEllipsis.vue'
 import Dialog from './Dialog.vue'
-import FormGroup from './../FormGroup.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
+import Button from '@/lucidui/buttons/Button.vue'
+import FormGroup from '@/lucidui/form/FormGroup.vue'
+import FormControlText from '@/lucidui/form/FormControlText.vue'
+import FormControlSelect from '@/lucidui/form/FormControlSelect.vue'
+import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
+import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
 
 const props = defineProps<{
   open: boolean
@@ -22,6 +27,8 @@ const emit = defineEmits<{
   (event: 'save', board: BoardUpdate): void
   (event: 'close'): void
 }>()
+
+const boardsStore = useBoardsStore()
 
 const form = useForm<BoardUpdate>({
   initialValues: {
@@ -38,7 +45,6 @@ const form = useForm<BoardUpdate>({
 
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
-const viewSettings = form.useFieldModel('viewSettings')
 const isCreateThemeDialogOpen = ref(false)
 
 const onSubmit = form.handleSubmit((values) => {
@@ -48,6 +54,19 @@ const onSubmit = form.handleSubmit((values) => {
 const onCreateTheme = (theme: Theme) => {
   isCreateThemeDialogOpen.value = false
   themeId.value = theme.id
+}
+
+const handleDeleteTheme = (id: string) => {
+  // If theme is selected theme, reset themeId
+  if (id === themeId.value)
+    themeId.value = boardsStore.themes[0].id
+
+  // Delete theme image
+  const image = boardsStore.getThemeById(id)?.image
+  if (image)
+    window.api.images.delete(image)
+
+  boardsStore.deleteTheme(id)
 }
 
 watch(() => props.open, () => {
@@ -63,71 +82,118 @@ watch(() => props.open, () => {
 
 <template>
   <Dialog
-    title="Edit Board"
     width="480px"
     :open="props.open"
     @close="() => emit('close')"
   >
-    <template #content>
-      <form @submit.prevent="() => onSubmit()">
-        <FormGroup
-          label="Title"
-          state="error"
-          :feedback="(form.submitCount.value > 0 && form.errors.value.title) || ''"
-        >
-          <input
-            v-model="title"
-            type="text"
-            placeholder="Enter title..."
-          >
-        </FormGroup>
-        <FormGroup
-          class="mt-6"
-          label="Select Theme"
-          state="error"
-          :feedback="(form.submitCount.value > 0 && form.errors.value.themeId) || ''"
-        >
-          <DropdownThemes
-            :selected="themeId || ''"
-            :allow-delete="true"
-            @select="(id: string) => themeId = id"
-          />
-        </FormGroup>
-        <div class="mt-4">
-          <button
-            type="button"
-            class="btn btn--gray w-full"
-            @click="() => isCreateThemeDialogOpen = true"
-          >
-            Create a custom theme
-          </button>
-        </div>
-        <div class="flex items-center justify-between gap-4 mt-12">
-          <div>
-            <PopoverConfirm
-              trigger-class="text-sm text-red-600 font-medium underline"
-              message="Are you sure you want to delete this Board? This cannot be undone."
-              width="270px"
-              confirm-text="Delete"
-              cancel-text="Cancel"
-              anchor="top-start"
-              @confirm="() => emit('delete', props.board.id)"
+    <template #header>
+      <div class="flex items-center w-full">
+        <h2 class="text-base font-bold">
+          Edit Board
+        </h2>
+        <Dropdown class="ml-auto" dropdown-width="180px" dropdown-placement="bottom-end">
+          <template #trigger="{ toggle }">
+            <Button
+              class="ml-auto shrink-0"
+              color="secondary"
+              variant="ghost"
+              shape="circle"
+              title="Close"
+              @click="toggle"
             >
-              <template #trigger>
+              <IconEllipsis class="h-5 w-5" />
+            </Button>
+          </template>
+          <template #options>
+            <DropdownOption @click="() => emit('delete', props.board.id)">
+              <template #label>
                 Delete Board
               </template>
-            </PopoverConfirm>
-          </div>
-          <div>
-            <button
-              class="btn btn--primary"
-              type="submit"
-            >
-              Save Changes
-            </button>
-          </div>
-
-        </div>
+            </DropdownOption>
+          </template>
+        </Dropdown>
+      </div>
+    </template>
+    <template #content>
+      <form @submit.prevent="() => onSubmit()">
+        <FormGroup>
+          <template #label>
+            Title *
+          </template>
+          <template #control="{ id }">
+            <FormControlText
+              :id="id"
+              :value="title"
+              type="text"
+              placeholder="Enter title..."
+              @input="(value) => title = value"
+            />
+          </template>
+          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
+            {{ form.errors.value.title }}
+          </template>
+        </FormGroup>
+        <FormGroup class="mt-6">
+          <template #label>
+            Theme
+          </template>
+          <template #control="{ id }">
+            <div class="flex items-center gap-2">
+              <FormControlSelect
+                :id="id"
+                :options="boardsStore.themes"
+                :value="themeId || ''"
+                @change="(value) => themeId = value.id"
+              >
+                <template #label="{ selected }">
+                  <div class="flex items-center gap-2 truncate">
+                    <img class="w-6 h-6 rounded-full object-cover object-center" :src="selected.thumbnail" alt="theme">
+                    {{ selected?.title }}
+                  </div>
+                </template>
+                <template #option-start="{ option }">
+                  <img class="w-6 h-6 rounded-full object-cover object-center" :src="option.thumbnail" alt="theme">
+                </template>
+                <template #option-label="{ option }">
+                  {{ option.title }}
+                </template>
+                <template #option-end="{ option }">
+                  <Button
+                    v-if="option.isCustom"
+                    tabindex="-1"
+                    size="sm"
+                    color="danger"
+                    variant="ghost"
+                    shape="circle"
+                    title="Delete theme (no undo)"
+                    @click.stop="handleDeleteTheme(option.id)"
+                  >
+                    <IconBin class="w-4 h-4" />
+                  </Button>
+                </template>
+              </FormControlSelect>
+              <Button
+                class="shrink-0"
+                color="secondary"
+                type="button"
+                @click="isCreateThemeDialogOpen = true"
+              >
+                Add theme
+              </Button>
+            </div>
+          </template>
+          <template v-if="form.submitCount.value > 0 && form.errors.value.themeId" #error>
+            {{ form.errors.value.themeId }}
+          </template>
+        </FormGroup>
+        <Button
+          class="mt-6 w-full"
+          color="primary"
+          type="submit"
+          :disabled="!form.meta.value.valid"
+        >
+          Save changes
+        </Button>
       </form>
     </template>
   </Dialog>

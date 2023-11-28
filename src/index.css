@@ -50,7 +50,7 @@
   }
 
   /** Inputs */
-  input[type="text"],
+  /*input[type="text"],
   input[type="email"],
   input[type="password"],
   input[type="search"],
@@ -85,7 +85,7 @@
   }
   input[type="color"] {
     @apply px-2.5 py-0.5;
-  }
+  }*/
 
   .prosey {
     @apply prose;

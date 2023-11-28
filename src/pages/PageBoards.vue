@@ -20,41 +20,6 @@ const onDelete = (board: Board) => {
 </script>
 
 <template>
-  <div>
-    <!--
-    <button class="btn btn--primary" @click="isCreateDialogOpen = true">
-      Create Board
-    </button>
-    <DialogCreateBoard
-      :open="isCreateDialogOpen"
-      @close="isCreateDialogOpen = false"
-      @create="(board) => onCreate(board)"
-    />
-    <ul>
-      <li
-        v-for="board in boardsStore.boards"
-        :key="board.id"
-      >
-        {{ board.title }}
-        <span>- {{ moment(board.dateCreated).fromNow() }}</span>
-        <router-link :to="`/boards/${board.id}`">
-          Open Board
-        </router-link>
-
-        <PopoverConfirm
-          title="Delete Board"
-          description="Are you sure you want to delete this board?"
-          @confirm="() => onDelete(board)"
-        >
-          <template #trigger>
-            <button class="bg-gray-300">
-              delete
-            </button>
-          </template>
-        </PopoverConfirm>
-      </li>
-    </ul>
-    -->
-  </div>
+  <div />
 </template>
 

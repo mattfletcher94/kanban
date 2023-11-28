@@ -54,6 +54,7 @@ module.exports = {
           500: '#e9e9eb',
         },
       },
+      // Use system fonts
       fontFamily: {
         sans: ['Nunito Sans', 'sans-serif'],
       },
@@ -71,6 +72,6 @@ module.exports = {
     require('@tailwindcss/typography'),
     require('@tailwindcss/line-clamp'),
     require('@tailwindcss/aspect-ratio'),
-    require('@tailwindcss/forms'),
+    // require('@tailwindcss/forms'),
   ],
 }

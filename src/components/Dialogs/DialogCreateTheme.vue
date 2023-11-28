@@ -8,7 +8,9 @@ import type { Theme, ThemeCreate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
 import IconFolder from '../Icons/IconFolder.vue'
 import Dialog from './Dialog.vue'
-import FormGroup from './../FormGroup.vue'
+import Button from '@/lucidui/buttons/Button.vue'
+import FormGroup from '@/lucidui/form/FormGroup.vue'
+import FormControlText from '@/lucidui/form/FormControlText.vue'
 
 const props = defineProps<{
   open: boolean
@@ -62,10 +64,12 @@ const handleSelectImage = async () => {
 
 watch(() => [props.open], () => {
   if (props.open) {
-    form.setValues({
-      title: '',
-      image: '',
-      thumbnail: '',
+    form.resetForm({
+      values: {
+        title: '',
+        image: '',
+        thumbnail: '',
+      },
     })
   }
 })
@@ -80,71 +84,67 @@ watch(() => [props.open], () => {
   >
     <template #content>
       <form @submit.prevent="() => onSubmit()">
-        <FormGroup
-          label="Theme name"
-          state="error"
-          :feedback="(form.submitCount.value > 0 && form.errors.value.title) || ''"
-        >
-          <input
-            v-model="title"
-            type="text"
-            placeholder="Enter theme name..."
-          >
-        </FormGroup>
-        <FormGroup
-          class="mt-6"
-          label="Theme image"
-          state="error"
-          :feedback="(form.submitCount.value > 0 && form.errors.value.image) || ''"
-        >
+        <FormGroup>
           <template #label>
-            <div class="flex items-center justify-between">
-              <p>
-                Theme image
-              </p>
-              <p class="font-medium">
-                Max file size: 3MB
-              </p>
-            </div>
+            Title *
           </template>
-          <button
-            type="button"
-            class="btn btn--gray flex items-center gap-2 w-full"
-            @click="() => handleSelectImage()"
-          >
-            <div>
-              <IconFolder class="w-4 h-4" />
-            </div>
-            <div>
-              Select an image
-            </div>
-          </button>
-          <!-- Image preview -->
-          <div
-            v-if="image"
-            class="relative block mt-4"
-          >
-            <img
-              alt="Image preview"
-              class="relative block w-full h-[210px] object-cover object-center rounded-lg"
-              :src="image"
-            >
-            <!-- Remove image -->
-            <div class="flex items-center justify-end mt-2">
-              <button
-                type="button"
-                class="btn btn--danger btn--sm absolute bottom-4 left-4 right-4"
-                @click="() => image = ''"
-              >
-                Remove image
-              </button>
-            </div>
-          </div>
+          <template #control="{ id }">
+            <FormControlText
+              :id="id"
+              :value="title"
+              type="text"
+              placeholder="Enter title..."
+              @input="(value) => title = value"
+            />
+          </template>
+          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
+            {{ form.errors.value.title }}
+          </template>
         </FormGroup>
-        <div class="flex items-center justify-center gap-4 mt-6">
-          <button class="btn btn--primary" type="submit">
+        <FormGroup class="mt-6">
+          <template #label>
+            Theme image (Max file size: 3MB) *
+          </template>
+          <template #control="{ id }">
+            <Button
+              :id="id"
+              class="w-full justify-start border border-slate-300"
+              color="secondary"
+              @click="handleSelectImage()"
+            >
+              <IconFolder class="w-4 h-4" />
+              Select image
+            </Button>
+          </template>
+          <template v-if="form.submitCount.value > 0 && form.errors.value.image" #error>
+            {{ form.errors.value.image }}
+          </template>
+        </FormGroup>
+        <div
+          v-if="image"
+          class="relative block mt-4"
+        >
+          <img
+            alt="Image preview"
+            class="relative block w-full h-[210px] object-cover object-center rounded-lg"
+            :src="image"
+          >
+          <div class="flex items-center justify-end mt-2">
+            <Button
+              type="button"
+              color="danger"
+              size="sm"
+              class="absolute bottom-4 left-4 right-4"
+              @click="() => image = ''"
+            >
+              Remove image
+            </Button>
+          </div>
+        </div>
+        <div class="flex w-full mt-6">
+          <Button class="w-full" type="submit">
             Create Theme
-          </button>
+          </Button>
         </div>
       </form>
     </template>

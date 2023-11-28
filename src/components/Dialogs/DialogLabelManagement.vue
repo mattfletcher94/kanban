@@ -1,16 +1,15 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from 'vue'
-import { PopoverButton } from '@headlessui/vue'
+import { computed, nextTick, ref } from 'vue'
 import type { Label, LabelCreate, LabelUpdate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
 import IconBin from '../Icons/IconBin.vue'
 import Checkbox from '../Inputs/Checkbox.vue'
-import PopoverConfirm from '../Popovers/PopoverConfirm.vue'
 import PopoverColorPicker from '../Popovers/PopoverColorPicker.vue'
 import { colors } from '../../data/colors'
 import SmoothReflow from '../SmoothReflow.vue'
 import Dialog from './Dialog.vue'
-import FormGroup from './../FormGroup.vue'
+import Button from '@/lucidui/buttons/Button.vue'
+import FormControlText from '@/lucidui/form/FormControlText.vue'
 
 const props = defineProps<{
   open: boolean
@@ -117,6 +116,12 @@ const onClose = () => {
                   </PopoverColorPicker>
                 </div>
                 <div class="w-full">
+                  <FormControlText
+                    class="w-full h-8"
+                    :value="label.title"
+                    @blur="(value) => handleEditLabelTitle(label.id, value)"
+                  />
+                  <!--
                   <input
                     placeholder="Edit label title"
                     class="label-textfield"
@@ -124,41 +129,39 @@ const onClose = () => {
                     :value="label.title"
                     @blur="(e: any) => handleEditLabelTitle(label.id, e.target?.value || '')"
                   >
+                  -->
                 </div>
                 <div class="shrink-0">
-                  <PopoverConfirm
-                    trigger-class="btn btn--light !px-2 !text-slate-500 !py-0 !h-8"
-                    message="Are you sure you want to delete this label?"
-                    width="240px"
-                    confirm-text="Delete"
-                    cancel-text="Cancel"
-                    @confirm="() => handleDeleteLabel(label.id)"
+                  <Button
+                    class="text-slate-600"
+                    color="secondary"
+                    variant="ghost"
+                    shape="circle"
+                    size="sm"
+                    @click="handleDeleteLabel(label.id)"
                   >
-                    <template #trigger>
-                      <IconBin class="w-4 h-4" />
-                    </template>
-                  </PopoverConfirm>
+                    <IconBin class="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </li>
           </ul>
         </SmoothReflow>
-        <div class="mt-4">
-          <button
-            class="btn btn--gray w-full"
-            @click="() => handleCreateLabelClick()"
-          >
-            Create Label
-          </button>
-        </div>
-        <div class="mt-4">
-          <button
-            class="btn btn--primary w-full"
-            @click="() => onClose()"
-          >
-            Done
-          </button>
-        </div>
+        <Button
+          class="w-full mt-6"
+          color="secondary"
+          type="button"
+          @click="() => handleCreateLabelClick()"
+        >
+          Create Label
+        </Button>
+        <Button
+          class="w-full mt-2"
+          type="button"
+          @click="() => onClose()"
+        >
+          Done
+        </Button>
       </div>
     </template>
   </Dialog>

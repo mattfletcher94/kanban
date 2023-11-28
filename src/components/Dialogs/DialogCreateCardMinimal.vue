@@ -5,7 +5,9 @@ import * as zod from 'zod'
 import { unref, watch } from 'vue'
 import type { CardCreate } from '../../stores/boards'
 import Dialog from './Dialog.vue'
-import FormGroup from './../FormGroup.vue'
+import Button from '@/lucidui/buttons/Button.vue'
+import FormGroup from '@/lucidui/form/FormGroup.vue'
+import FormControlText from '@/lucidui/form/FormControlText.vue'
 
 const props = defineProps<{
   columnId: string
@@ -69,21 +71,26 @@ watch(() => [props.open, props.columnId], () => {
   >
     <template #content>
       <form @submit.prevent="() => onSubmit()">
-        <FormGroup
-          state="error"
-          :feedback="(form.submitCount.value > 0 && form.errors.value.title) || ''"
-        >
-          <input
-            v-model="title"
-            type="text"
-            placeholder="Enter card name..."
-          >
+        <FormGroup>
+          <template #label>
+            Title *
+          </template>
+          <template #control="{ id }">
+            <FormControlText
+              :id="id"
+              :value="title"
+              type="text"
+              placeholder="Enter card title..."
+              @input="(value) => title = value"
+            />
+          </template>
+          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
+            {{ form.errors.value.title }}
+          </template>
         </FormGroup>
-        <div class="flex items-center justify-end gap-4 mt-6">
-          <button class="btn btn--primary" type="submit">
-            Create Card
-          </button>
-        </div>
+        <Button class="w-full mt-6" type="submit">
+          Create Column
+        </Button>
       </form>
     </template>
   </Dialog>

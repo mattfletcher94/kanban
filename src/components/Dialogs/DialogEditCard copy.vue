@@ -197,203 +197,202 @@ watch(() => props.open, () => {
   <Dialog
     :open="props.open"
     width="660px"
-    :no-content-padding="true"
     @close="() => onClose()"
   >
     <template #header>
-      <FormGroup class="py-2">
-        <template #control="{ id }">
-          <FormControlTextarea
-            :id="id"
-            class="text-base font-bold -ml-1"
-            :inline="true"
-            :value="title"
-            :spellcheck="false"
-            placeholder="No title"
-            @change="(value) => title = value"
-          />
-        </template>
-      </FormGroup>
+      <div class="flex items-center py-2">
+        <resize-textarea
+          v-model="title"
+          :rows="1"
+          :min-height="32"
+          :spellcheck="false"
+          class="textarea--in-place text-lg font-bold mt-1"
+          placeholder="Add Title"
+        />
+      </div>
     </template>
     <template #content>
-      <div class="flex w-full">
-        <div class="flex flex-col gap-8 w-full p-6">
+      <a href="#" />
+      <div class="flex flex-col gap-8">
 
-          <!-- Description -->
-          <FormGroup>
-            <template #label>
-              Description
-            </template>
-            <template #control="{ id }">
-              <FormControlTextarea
-                :id="id"
-                :value="description"
-                :inline="true"
-                :spellcheck="false"
-                class="text-sm -ml-1"
-                placeholder="No description"
-                @change="(value) => description = value"
-              />
-            </template>
-          </FormGroup>
-
-          <!-- Todos -->
-          <FormGroup>
-            <template #label>
-              To-do list
-              ({{ todos?.filter(x => x.completed).length }}/{{ todos?.length }})
-            </template>
-            <template #control="{ id }">
-              <ul
-                v-if="todos && todos.length"
-                ref="todosList"
-                class="flex flex-col w-full rounded-lg overflow-hidden"
-              >
-                <li
-                  v-for="(todo) in todos"
-                  :key="todo.id"
-                  class="flex items-center gap-2 bg-white hover:bg-slate-50 rounded-lg p-1"
-                >
-                  <div class="shrink-0">
-                    <Checkbox
-                      :checked="todo.completed"
-                      @change="() => handleToggleTodoCompleted(todo.id)"
-                    />
-                  </div>
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="todo.description"
-                      :class="{ 'line-through': todo.completed }"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter description..."
-                      @change="(value) => todo.description = value"
-                    />
-                  </div>
-                  <div class="shrink-0">
-                    <Button class="text-slate-500" color="secondary" variant="ghost" size="sm" @click="handleDeleteTodo(todo.id)">
-                      <IconBin class="w-4 h-4" />
-                    </Button>
-                  </div>
-                </li>
-              </ul>
-              <div>
-                <Button
-                  :id="id"
-                  key="button"
-                  color="secondary"
-                  size="sm"
-                  class="justify-start"
-                  @click="() => handleClickAddTodoBtn()"
-                >
-                  <IconAdd class="w-4 h-4" />
-                  Add Todo
-                </Button>
-              </div>
-            </template>
-          </FormGroup>
-
-          <!-- Links -->
-          <FormGroup>
-            <template #label>
-              Links
-            </template>
-            <template #control="{ id }">
-              <ul
-                v-if="links && links.length"
-                ref="linksList"
-                class="flex flex-col divide-y divide-slate-300 w-full rounded-lg border border-slate-300 overflow-hidden"
-              >
-                <li
-                  v-for="(link) in links"
-                  :key="link.id"
-                  class="flex items-center gap-2 bg-white p-2"
-                >
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="link.name"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter link name..."
-                      @change="(value) => link.name = value"
-                    />
-                  </div>
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="link.url"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter link URL..."
-                      @change="(value) => link.url = value"
-                    />
-                  </div>
-                  <div class="ml-auto shrink-0">
-                    <Button
-                      v-tooltip="{ content: 'Open link in browser' }"
-                      as="a"
-                      color="secondary"
-                      size="sm"
-                      :href="link.url"
-                      target="_blank"
-                    >
-                      <IconOpen class="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div class="shrink-0">
-                    <Button
-                      color="secondary"
-                      size="sm"
-                      @click="handleDeleteLink(link.id)"
-                    >
-                      <IconBin class="w-4 h-4" />
-                    </Button>
-                  </div>
-                </li>
-              </ul>
-              <Button
-                :id="id"
-                class="mt-2"
-                color="secondary"
-                @click="() => handleClickAddLinkBtn()"
-              >
-                Add Link
-                <IconAdd class="w-4 h-4" />
-              </Button>
-            </template>
-          </FormGroup>
-        </div>
-        <div class="flex flex-col shrink-0 w-[180px] p-4 border-l border-l-slate-200">
-          <!-- Labels -->
-          <FormGroup>
-            <template #label>
+        <!-- Labels -->
+        <FormGroup>
+          <template #label>
+            <div class="">
               Labels
-            </template>
-            <template #control="{ id }">
-              <div class="flex flex-col gap-2 w-full">
-                <CardLabel
-                  v-for="label in selectedLabels"
-                  :key="label.id"
-                  class="w-full min-h-[32px]"
-                  :color="label.color"
-                  :title="label.title"
-                >
-                  {{ label.title }}
-                </CardLabel>
-                <Button
-                  :id="id"
-                  key="button"
-                  color="secondary"
-                  size="sm"
-                  class="justify-start"
-                  @click="() => dialogLabelManagementOpen = true"
-                >
-                  <IconAdd class="w-4 h-4" />
-                  Add Label
+            </div>
+          </template>
+          <div
+            class="flex flex-wrap gap-2 w-full"
+          >
+            <CardLabel
+              v-for="label in selectedLabels"
+              :key="label.id"
+              class="h-8"
+              :color="label.color"
+              :title="label.title"
+            >
+              {{ label.title }}
+            </CardLabel>
+            <button
+              key="button"
+              class="btn btn--gray h-8 flex items-center gap-2 justify-start"
+              @click="() => dialogLabelManagementOpen = true"
+            >
+              <div>
+                Add Label
+              </div>
+              <div>
+                <IconAdd class="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        </FormGroup>
+
+        <!-- Description -->
+        <FormGroup>
+          <template #label>
+            Description
+          </template>
+          <resize-textarea
+            v-model="description"
+            :spellcheck="false"
+            :rows="1"
+            :min-height="32"
+            class="textarea--in-place text-base"
+            placeholder="No description"
+          />
+        </FormGroup>
+
+        <!-- Todos -->
+        <FormGroup>
+          <template #label>
+            <div class="flex items-center px-1">
+              <div class="">
+                To Do List
+                <span v-if="todos && todos.length > 0">
+                  ({{ todos.filter(x => x.completed).length }}/{{ todos.length }})
+                </span>
+              </div>
+            </div>
+          </template>
+          <ul
+            v-if="todos && todos.length"
+            ref="todosList"
+            class="flex flex-col divide-y divide-gray-300 w-full rounded-lg border border-gray-300 overflow-hidden"
+          >
+            <li
+              v-for="(todo) in todos"
+              :key="todo.id"
+              class="flex items-center gap-2 bg-white p-3"
+            >
+              <div class="shrink-0">
+                <Checkbox
+                  :checked="todo.completed"
+                  @change="() => handleToggleTodoCompleted(todo.id)"
+                />
+              </div>
+              <div class="w-full">
+                <resize-textarea
+                  v-model="todo.description"
+                  :class="{
+                    'line-through': todo.completed,
+                  }"
+                  :rows="1"
+                  :min-height="32"
+                  :spellcheck="false"
+                  class="textarea--in-place"
+                  placeholder="Enter description..."
+                />
+              </div>
+              <div class="shrink-0">
+                <Button color="secondary" variant="ghost" size="sm" @click="handleDeleteTodo(todo.id)">
+                  <IconBin class="w-4 h-4" />
                 </Button>
               </div>
-            </template>
-          </FormGroup>
-        </div>
+            </li>
+          </ul>
+          <div>
+            <button
+              class="btn btn--gray h-8 mt-2 flex items-center gap-2 justify-start"
+              @click="() => handleClickAddTodoBtn()"
+            >
+              <div>
+                Add Todo
+              </div>
+              <div>
+                <IconAdd class="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        </FormGroup>
+
+        <!-- Links -->
+        <FormGroup>
+          <template #label>
+            <div class="flex items-center px-1">
+              <div class="">
+                Links
+              </div>
+            </div>
+          </template>
+          <ul
+            v-if="links && links.length"
+            ref="linksList"
+            class="flex flex-col divide-y divide-gray-300 w-full rounded-lg border border-gray-300 overflow-hidden"
+          >
+            <li
+              v-for="(link) in links"
+              :key="link.id"
+              class="flex items-center gap-2 bg-white p-3"
+            >
+              <div class="w-full">
+                <input
+                  v-model="link.name"
+                  placeholder="Enter link name..."
+                  class="links-textfield links-textfield--name"
+                  type="text"
+                >
+              </div>
+              <div class="w-full">
+                <input
+                  v-model="link.url"
+                  placeholder="Enter link URL..."
+                  class="links-textfield"
+                  type="text"
+                >
+              </div>
+              <div class="ml-auto shrink-0">
+                <a
+                  v-tooltip="{ content: 'Open link in browser' }"
+                  class="btn btn--gray flex items-center !px-2 !text-slate-500 !py-0 !h-8"
+                  :href="link.url"
+                  target="_blank"
+                >
+                  <IconOpen class="w-4 h-4" />
+                </a>
+              </div>
+              <div class="shrink-0">
+                <Button color="secondary" variant="ghost" size="sm" @click="handleDeleteLink(link.id)">
+                  <IconBin class="w-4 h-4" />
+                </Button>
+              </div>
+            </li>
+          </ul>
+          <div>
+            <button
+              class="btn btn--gray h-8 mt-2 flex items-center gap-2 justify-start"
+              @click="() => handleClickAddLinkBtn()"
+            >
+              <div>
+                Add Link
+              </div>
+              <div>
+                <IconAdd class="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        </FormGroup>
       </div>
     </template>
 

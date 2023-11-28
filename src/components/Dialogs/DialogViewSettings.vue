@@ -6,7 +6,7 @@ import { ref, unref, watch } from 'vue'
 import type { Board, BoardUpdate, Theme } from '../../stores/boards'
 import Switch from '../Inputs/Switch.vue'
 import Dialog from './Dialog.vue'
-import FormGroup from './../FormGroup.vue'
+import Button from '@/lucidui/buttons/Button.vue'
 
 const props = defineProps<{
   open: boolean
@@ -112,14 +112,9 @@ watch(() => props.open, () => {
             Show card todos
           </Switch>
         </div>
-        <div class="flex items-center w-full gap-4 mt-6">
-          <button
-            class="btn btn--primary w-full"
-            type="submit"
-          >
-            Save Changes
-          </button>
-        </div>
+        <Button class="w-full mt-6" type="submit">
+          Save changes
+        </Button>
       </form>
     </template>
   </Dialog>

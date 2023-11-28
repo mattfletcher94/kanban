@@ -14,18 +14,18 @@ import CardLabel from '../components/CardLabel.vue'
 import IconChevonDown from '../components/Icons/IconChevonDown.vue'
 import IconAdd from '../components/Icons/IconAdd.vue'
 import IconConfig from '../components/Icons/IconConfig.vue'
-import Dropdown from '../components/Dropdowns/Dropdown.vue'
-import DropdownOption from '../components/Dropdowns/DropdownOption.vue'
-import PopoverConfirm from '../components/Popovers/PopoverConfirm.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
 import IconOpen from '../components/Icons/IconOpen.vue'
-import IconCheck from '../components/Icons/IconCheck.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import Checkbox from '../components/Inputs/Checkbox.vue'
 import { useBoardsStore } from './../stores/boards'
 import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
+import Button from '@/lucidui/buttons/Button.vue'
+import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
+import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -38,13 +38,13 @@ const columns = computed(() => boardsStore.getBoardColumns(board.value?.id || ''
 
 const columnRef = ref<HTMLElement>()
 const cardRefs = ref<HTMLElement[]>([])
-const deleteColumnPopoverTriggerRef = ref<HTMLElement[]>()
 const isCreateDialogOpen = ref(false)
 const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
 const isViewSettingsDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
 const createCardColumnCandidate = ref<string | null>(null)
+const isTestModalOpen = ref(false)
 
 const editCardCandidate = ref<Card | null>(null)
 
@@ -95,13 +95,6 @@ const handleCreateColumn = (column: ColumnCreate) => {
 const handleUpdateColumn = (column: ColumnUpdate) => {
   boardsStore.updateColumn(column)
   editColumnCandidate.value = null
-}
-
-const handleDeleteColumnClick = (columnIndex: number) => {
-  if (!deleteColumnPopoverTriggerRef.value || deleteColumnPopoverTriggerRef.value.length < columnIndex)
-    return
-
-  deleteColumnPopoverTriggerRef.value[columnIndex].click()
 }
 
 const handleDeleteColumn = (columnId: string) => {
@@ -306,360 +299,317 @@ watch(() => columns.value.length, () => {
       <!-- Header -->
       <header class="relative block w-full text-base z-20 bg-white shadow-md">
         <div class="flex items-center gap-4 w-full h-16 px-4">
-          <div>
-            <div class="flex items-center justify-center w-8 h-8">
-              <img src="/logo-256x256.png" class="w-full h-full object-cover object-center">
-            </div>
+          <div class="flex items-center justify-center w-8 h-8">
+            <img src="/logo-256x256.png" class="w-full h-full object-cover object-center">
           </div>
-          <div class="shrink-0">
-            <Dropdown>
-              <template #trigger>
-                <button class="btn btn--gray flex w-[280px] items-center justify-between font-bold rounded-md h-9">
-                  <Transition mode="out-in" name="slide-fade">
-                    <div :key="board.title" class="tracking-wide min-w-0 truncate">
-                      {{ board.title }}
-                    </div>
-                  </Transition>
-                  <div>
-                    <IconChevonDown class="w-4 h-4" />
+          <Dropdown class="shrink-0" dropdown-width="cover">
+            <template #trigger="{ toggle }">
+              <Button
+                class="w-[270px] justify-start"
+                color="secondary"
+                @click="toggle"
+              >
+                <div class="w-full text-left truncate">
+                  {{ board.title }}
+                </div>
+                <IconChevonDown class="w-4 h-4 ml-auto" />
+              </Button>
+            </template>
+            <template #options>
+              <DropdownOption @click="isCreateDialogOpen = true">
+                <template #start>
+                  <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white">
+                    <IconAdd class="w-4 h-4" />
                   </div>
-                </button>
-              </template>
-              <template #options>
-                <DropdownOption
-                  @click="() => isCreateDialogOpen = true"
-                >
-                  <div class="flex items-center gap-4 w-full p-1">
-                    <div>
-                      <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white">
-                        <IconAdd class="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div class="min-w-0 truncate">
-                      Create Board
-                    </div>
-                  </div>
-                </DropdownOption>
-                <DropdownOption
-                  v-for="b in boardsStore.boards.sort((a, b) => a.title.localeCompare(b.title))"
-                  :key="b.id"
-                  @click="() => router.push(`/boards/${b.id}`)"
-                >
-                  <div class="flex items-center gap-4 w-full p-1">
-                    <div>
-                      <div
-                        class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
-                        :style="{ backgroundImage: `url(${boardsStore.getThemeById(b.themeId)?.thumbnail})` }"
-                      />
-                    </div>
-                    <div class="min-w-0 truncate">
-                      {{ b.title }}
-                    </div>
-                  </div>
-                </DropdownOption>
-              </template>
-            </Dropdown>
-          </div>
+                </template>
+                <template #label>
+                  Create Board
+                </template>
+              </DropdownOption>
+              <DropdownOption
+                v-for="b in boardsStore.boards.sort((a, b) => a.title.localeCompare(b.title))"
+                :key="b.id"
+                :selected="b.id === board.id"
+                @click="router.push(`/boards/${b.id}`)"
+              >
+                <template #start>
+                  <div
+                    class="w-6 h-6 rounded-full bg-no-repeat bg-cover bg-center"
+                    :style="{ backgroundImage: `url(${boardsStore.getThemeById(b.themeId)?.thumbnail})` }"
+                  />
+                </template>
+                <template #label>
+                  {{ b.title }}
+                </template>
+              </DropdownOption>
+            </template>
+          </Dropdown>
           <div class="ml-auto flex items-center gap-2">
-            <button
-              class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
-              @click="() => isCreateColumnDialogOpen = true"
+            <Button
+              color="secondary"
+              title="Add Column"
+              @click="isTestModalOpen = !isTestModalOpen"
             >
-              <div>
-                Add Column
-              </div>
-              <div>
-                <IconAdd class="w-4 h-4" />
-              </div>
-            </button>
-            <button
-              class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
-              @click="() => isEditBoardDialogOpen = true"
+              Add Column
+              <IconAdd class="w-4 h-4" />
+            </Button>
+            <Button
+              color="secondary"
+              @click="isEditBoardDialogOpen = true"
             >
-              <div>
-                Board settings
-              </div>
-              <div>
-                <IconConfig class="w-4 h-4" />
-              </div>
-            </button>
-            <button
-              class="btn btn--gray h-9 flex items-center gap-2 justify-between font-bold rounded-md"
-              @click="() => isViewSettingsDialogOpen = true"
+              Board Settings
+              <IconConfig class="w-4 h-4" />
+            </Button>
+            <Button
+              color="secondary"
+              @click="isViewSettingsDialogOpen = true"
             >
-              <div>
-                View settings
-              </div>
-              <div>
-                <IconEye class="w-4 h-4" />
-              </div>
-            </button>
+              View Settings
+              <IconEye class="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </header>
 
-      <!-- Board area -->
-      <Transition
-        class="board overflow-x-auto overflow-y-hidden w-full"
-        name="board"
-        as="div"
-        appear
-        mode="out-in"
-      >
+      <div class="flex w-full h-full flex-nowrap">
 
-        <!-- Columns -->
-        <div
-          v-if="columns.length > 0"
-          ref="columnRef"
-          class="board__columns flex flex-nowrap items-start w-auto p-6 gap-6"
+        <!-- Board area -->
+        <Transition
+          class="board overflow-x-auto overflow-y-hidden w-full"
+          name="board"
+          as="div"
+          appear
+          mode="out-in"
         >
-          <div
-            v-for="(column, columnIndex) in columns"
-            :id="column.id"
-            :key="column.id"
-            :data-column-id="column.id"
-            class="board__columns__column relative text-base shrink-0 basis-[22rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
-          >
-            <div class="block w-full">
 
-              <!-- Column title -->
-              <div class="flex w-full items-center justify-between font-bold gap-4 px-4 py-2.5 border-b border-b-slate-200 text-slate-800">
-                <div
-                  class="board__columns__column__handle cursor-grab"
-                >
-                  <IconHandle class="w-4 h-4" />
-                </div>
-                <div>
-                  <Transition mode="out-in" name="slide-fade">
-                    <h3
-                      :key="column.title"
-                      class="tracking-wide text-sm"
+          <!-- Columns -->
+          <div
+            v-if="columns.length > 0"
+            ref="columnRef"
+            class="board__columns flex flex-nowrap items-start w-auto p-6 gap-6"
+          >
+            <div
+              v-for="column in columns"
+              :id="column.id"
+              :key="column.id"
+              :data-column-id="column.id"
+              class="board__columns__column relative text-base shrink-0 basis-[22rem] max-h-full overflow-hidden bg-slate-100 rounded-lg shadow-md outline-dashed outline-2 outline-transparent outline-offset-2"
+            >
+              <div class="block w-full">
+
+                <!-- Column title -->
+                <div class="flex w-full items-center justify-between font-bold gap-2 px-4 py-2.5 border-b border-b-slate-200 text-slate-800">
+                  <div class="board__columns__column__handle cursor-grab">
+                    <IconHandle class="w-4 h-4" />
+                  </div>
+                  <div class="ml-2">
+                    <Transition mode="out-in" name="slide-fade">
+                      <h3
+                        :key="column.title"
+                        class="tracking-wide text-sm"
+                      >
+                        {{ column.title }}
+                      </h3>
+                    </Transition>
+                  </div>
+                  <div class="ml-auto">
+                    <Button
+                      color="secondary"
+                      variant="tonal"
+                      shape="circle"
+                      size="sm"
+                      title="Add Card"
+                      @click="createCardColumnCandidate = column.id"
                     >
-                      {{ column.title }}
-                    </h3>
-                  </Transition>
-                </div>
-                <div class="ml-auto">
-                  <button
-                    v-tooltip="{ content: 'Add Card' }"
-                    class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
-                    @click="() => createCardColumnCandidate = column.id"
-                  >
-                    <IconAdd class="w-4 h-4" />
-                  </button>
-                </div>
-                <div>
-                  <Dropdown
-                    width="180px"
-                    anchor="right"
-                  >
-                    <template #trigger>
-                      <button
-                        v-tooltip="{ content: 'Options' }"
-                        class="btn btn--gray flex items-center justify-center w-8 h-8 rounded-full p-0"
-                      >
-                        <IconChevonDown class="w-4 h-4" />
-                      </button>
-                    </template>
-                    <template #options>
-                      <DropdownOption
-                        @click="() => editColumnCandidate = column"
-                      >
-                        <div class="flex items-center gap-4 w-full p-1">
-                          <div>
-                            <IconPencil class="w-4 h-4" />
-                          </div>
-                          <div class="min-w-0 truncate">
-                            Edit Column
-                          </div>
-                        </div>
-                      </DropdownOption>
-                      <DropdownOption
-                        @click="() => handleDeleteColumnClick(columnIndex)"
-                      >
-                        <div class="flex items-center gap-4 w-full p-1">
-                          <div>
-                            <IconBin class="w-4 h-4" />
-                          </div>
-                          <div class="min-w-0 truncate">
-                            Delete Column
-                          </div>
-                        </div>
-                      </DropdownOption>
-                    </template>
-                  </Dropdown>
-                  <div class="absolute top-0 right-0">
-                    <PopoverConfirm
-                      message="Are you sure you want to delete this column? This cannot be undone"
-                      trigger-class="absolute top-[30px] right-0 w-0 h-0 p-0"
-                      width="240px"
-                      anchor="bottom-end"
-                      @confirm="() => handleDeleteColumn(column.id)"
-                    >
-                      <template #trigger>
-                        <div ref="deleteColumnPopoverTriggerRef" class="" />
+                      <IconAdd class="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div>
+                    <Dropdown dropdown-placement="bottom-end">
+                      <template #trigger="{ toggle }">
+                        <Button
+                          color="secondary"
+                          variant="tonal"
+                          shape="circle"
+                          size="sm"
+                          title="Edit or delete column"
+                          @click="toggle"
+                        >
+                          <IconChevonDown class="w-4 h-4" />
+                        </Button>
                       </template>
-                    </PopoverConfirm>
+                      <template #options>
+                        <DropdownOption @click="editColumnCandidate = column">
+                          <template #start>
+                            <IconPencil class="block w-4 h-4" />
+                          </template>
+                          <template #label>
+                            Edit Column
+                          </template>
+                        </DropdownOption>
+                        <DropdownOption @click="handleDeleteColumn(column.id)">
+                          <template #start>
+                            <IconBin class="block w-4 h-4" />
+                          </template>
+                          <template #label>
+                            Delete Column
+                          </template>
+                        </DropdownOption>
+                      </template>
+                    </Dropdown>
                   </div>
                 </div>
-              </div>
 
-              <!-- Column cards -->
-              <div
-                class="board__columns__column__cards block w-full overflow-x-hidden overflow-y-auto"
-                :style="{
-                  maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem - 1rem)`,
-                }"
-              >
+                <!-- Column cards -->
                 <div
-                  ref="cardRefs"
-                  :data-column-id="column.id"
-                  class="flex flex-col flex-nowrap justify-start gap-4 p-4 w-full min-h-[200px]"
+                  class="board__columns__column__cards block w-full overflow-x-hidden overflow-y-auto"
+                  :style="{
+                    maxHeight: `calc(100vh - 4rem - 1.5rem - 1.5rem - 3rem - 1rem)`,
+                  }"
                 >
-
-                  <!-- Card -->
-                  <button
-                    v-for="card in boardsStore.getColumnCards(column.id)"
-                    :id="card.id"
-                    :key="card.id"
-                    :data-card-id="card.id"
-                    class="board__columns__column__cards__card rounded-lg relative p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab text-left"
-                    @click="() => editCardCandidate = card"
+                  <div
+                    ref="cardRefs"
+                    :data-column-id="column.id"
+                    class="flex flex-col flex-nowrap justify-start gap-4 p-4 w-full min-h-[200px]"
                   >
 
-                    <!-- Card title -->
-                    <div class="flex w-full items-start justify-start font-medium gap-4">
-                      <div class="min-w-0">
-                        <h4
-                          :key="card.title"
-                          class="min-w-0 mt-[3px] text-base font-bold"
-                          v-html="card.title"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Card Labels -->
-                    <div
-                      v-if="card.labelIds && card.labelIds.length && board.viewSettings?.hideLabels !== true"
-                      class="flex flex-wrap gap-2 w-full items-center mt-2"
-                      name="vue-list"
-                      tag="div"
+                    <!-- Card -->
+                    <button
+                      v-for="card in boardsStore.getColumnCards(column.id)"
+                      :id="card.id"
+                      :key="card.id"
+                      :data-card-id="card.id"
+                      class="board__columns__column__cards__card rounded-lg relative p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab text-left"
+                      @click="() => editCardCandidate = card"
                     >
-                      <CardLabel
-                        v-for="label in boardsStore.getCardLabels(card.id)"
-                        :key="label.id"
-                        :color="label.color"
-                        :title="label.title"
-                      >
-                        {{ label.title }}
-                      </CardLabel>
-                    </div>
 
-                    <!-- Card body -->
-                    <div class="flex flex-col gap-4 mt-4">
-                      <!-- Card description -->
-                      <div
-                        v-if="card.description && board.viewSettings?.hideDescription !== true"
-                      >
-                        <div
-                          class="prose-card--sm line-clamp-6"
-                          v-html="card.description"
-                        />
+                      <!-- Card title -->
+                      <div class="flex w-full items-start justify-start font-medium gap-4">
+                        <div class="min-w-0">
+                          <h4
+                            :key="card.title"
+                            class="min-w-0 mt-[3px] text-base font-bold"
+                            v-html="card.title"
+                          />
+                        </div>
                       </div>
 
-                      <ul
-                        v-if="card.todos && card.todos.length && board.viewSettings?.hideTodos !== true"
-                        ref="todosList"
-                        class="flex flex-col divide-y divide-gray-200 w-full rounded-lg border border-gray-200 bg-slate-50 overflow-hidden max-h-[300px] overflow-x-hidden overflow-y-auto"
-                      >
-                        <li
-                          v-for="(todo) in card.todos"
-                          :key="todo.id"
-                          class="flex items-center"
-                          @click="(e) => e.stopPropagation()"
-                        >
-                          <div class="w-full">
-                            <Checkbox
-                              class="p-2 w-full hover:bg-primary-50 transition-colors"
-                              size="sm"
-                              :checked="todo.completed"
-                              @change="(value) => handleToggleTodoCompleted(card.id, todo.id)"
-                            >
-                              <span :class="{ 'line-through': todo.completed }">
-                                {{ todo.description }}
-                              </span>
-                            </Checkbox>
-                          </div>
-                        </li>
-                      </ul>
-
-                      <!-- Card links -->
+                      <!-- Card Labels -->
                       <div
-                        v-if="card.links && card.links.length > 0 && board.viewSettings?.hideLinks !== true"
-                        class="flex flex-wrap gap-2 w-full"
+                        v-if="card.labelIds && card.labelIds.length && board.viewSettings?.hideLabels !== true"
+                        class="flex flex-wrap gap-2 w-full items-center mt-2"
+                        name="vue-list"
+                        tag="div"
                       >
-                        <div
-                          v-for="link in card.links"
-                          :key="link.id"
+                        <CardLabel
+                          v-for="label in boardsStore.getCardLabels(card.id)"
+                          :key="label.id"
+                          :color="label.color"
+                          :title="label.title"
                         >
-                          <a
-                            v-tooltip="{ content: `Open ${link.name} in browser` }"
-                            class="btn btn--gray btn--sm text-xs flex items-center gap-2 !text-slate-500 "
+                          {{ label.title }}
+                        </CardLabel>
+                      </div>
+
+                      <!-- Card body -->
+                      <div class="flex flex-col gap-4 mt-4">
+                        <!-- Card description -->
+                        <div
+                          v-if="card.description && board.viewSettings?.hideDescription !== true"
+                        >
+                          <div
+                            class="prose-card--sm line-clamp-6"
+                            v-html="card.description"
+                          />
+                        </div>
+
+                        <ul
+                          v-if="card.todos && card.todos.length && board.viewSettings?.hideTodos !== true"
+                          ref="todosList"
+                          class="flex flex-col divide-y divide-gray-200 w-full rounded-lg border border-gray-200 bg-slate-50 overflow-hidden max-h-[300px] overflow-x-hidden overflow-y-auto"
+                        >
+                          <li
+                            v-for="(todo) in card.todos"
+                            :key="todo.id"
+                            class="flex items-center"
+                            @click="(e) => e.stopPropagation()"
+                          >
+                            <div class="w-full">
+                              <Checkbox
+                                class="p-2 w-full hover:bg-primary-50 transition-colors"
+                                size="sm"
+                                :checked="todo.completed"
+                                @change="(value) => handleToggleTodoCompleted(card.id, todo.id)"
+                              >
+                                <span :class="{ 'line-through': todo.completed }">
+                                  {{ todo.description }}
+                                </span>
+                              </Checkbox>
+                            </div>
+                          </li>
+                        </ul>
+
+                        <!-- Card links -->
+                        <div
+                          v-if="card.links && card.links.length > 0 && board.viewSettings?.hideLinks !== true"
+                          class="flex flex-wrap gap-2 w-full"
+                        >
+                          <Button
+                            v-for="link in card.links"
+                            :key="link.id"
+                            as="a"
+                            size="sm"
+                            color="secondary"
                             :href="link.url"
                             target="_blank"
                           >
                             <IconOpen class="w-4 h-4" />
-                            <div>
-                              {{ link.name }}
-                            </div>
-                          </a>
+                            {{ link.name }}
+                          </Button>
                         </div>
                       </div>
-                    </div>
+                    </button>
 
-                  </button>
-
-                </div>
-                <div class="block w-full px-4 pb-4">
-                  <button
-                    class="btn btn--light w-full h-9 flex items-center gap-2 justify-center font-bold rounded-md"
-                    @click="() => createCardColumnCandidate = column.id"
-                  >
-                    <div>
+                  </div>
+                  <div class="block w-full px-4 pb-4">
+                    <Button
+                      class="w-full"
+                      color="secondary"
+                      @click="createCardColumnCandidate = column.id"
+                    >
                       Add Card
-                    </div>
-                    <div>
                       <IconAdd class="w-4 h-4" />
-                    </div>
-                  </button>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
+            <div class="relative shrink-0 basis-[1px] h-[200px]" />
           </div>
-          <div class="relative shrink-0 basis-[1px] h-[200px]" />
-        </div>
 
-        <!-- Empty state -->
-        <div
-          v-else
-          class="absolute top-0 left-0 w-full h-full flex items-center justify-center"
-        >
+          <!-- Empty state -->
           <div
-            class="flex items-center justify-center flex-col gap-4 text-base p-8 bg-slate-100 rounded-lg shadow-md"
+            v-else
+            class="absolute top-0 left-0 w-full h-full flex items-center justify-center"
           >
-            <p class="font-medium text-base">
-              Create your first column
-            </p>
-            <button
-              class="btn btn--primary"
-              @click="() => isCreateColumnDialogOpen = true"
+            <div
+              class="flex items-center justify-center flex-col gap-4 text-base p-8 bg-slate-100 rounded-lg shadow-md"
             >
-              Add Column
-            </button>
+              <p class="font-medium text-base">
+                Create your first column
+              </p>
+              <Button
+                color="primary"
+                @click="isCreateColumnDialogOpen = true"
+              >
+                Add Column
+              </Button>
+            </div>
           </div>
-        </div>
 
-      </Transition>
+        </Transition>
+
+      </div>
 
       <!-- Edit Board dialog -->
       <DialogEditBoard
@@ -667,7 +617,7 @@ watch(() => columns.value.length, () => {
         :themes="boardsStore.themes"
         :open="isEditBoardDialogOpen"
         @save="(board) => handleUpdateBoard(board)"
-        @delete="(boardId) => handleDeleteBoard()"
+        @delete="() => handleDeleteBoard()"
         @close="() => isEditBoardDialogOpen = false"
       />
 
@@ -725,9 +675,9 @@ watch(() => columns.value.length, () => {
             <p class="font-medium text-base">
               Create your first board
             </p>
-            <button class="btn btn--primary" @click="() => isCreateDialogOpen = true">
+            <Button color="primary" @click="isCreateDialogOpen = true">
               Add Board
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -738,6 +688,11 @@ watch(() => columns.value.length, () => {
       :open="isCreateDialogOpen"
       @close="isCreateDialogOpen = false"
       @create="(board) => handleCreateBoard(board)"
+    />
+
+    <Modal
+      :open="isTestModalOpen"
+      @close="isTestModalOpen = false"
     />
 
   </div>

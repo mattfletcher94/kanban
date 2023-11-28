@@ -8,6 +8,7 @@ import {
 import { nextTick, ref, watch } from 'vue'
 import IconClose from './../Icons/IconClose.vue'
 import LoadingBar from './../LoadingBar.vue'
+import Button from '@/lucidui/buttons/Button.vue'
 
 // Props
 const props = defineProps({
@@ -24,6 +25,10 @@ const props = defineProps({
     default: '',
   },
   busy: {
+    type: Boolean,
+    default: false,
+  },
+  noContentPadding: {
     type: Boolean,
     default: false,
   },
@@ -86,11 +91,11 @@ const handleClose = () => {
         <TransitionChild
           as="template"
           enter="duration-200 ease-in-out"
-          enter-from="opacity-0 scale-75"
+          enter-from="opacity-0 scale-90"
           enter-to="opacity-100 scale-100"
           leave="duration-200 ease-in-out"
           leave-from="opacity-100 scale-100"
-          leave-to="opacity-0 scale-75"
+          leave-to="opacity-0 scale-90"
         >
           <div
             class="dialog"
@@ -101,7 +106,16 @@ const handleClose = () => {
               class="!absolute top-0 left-0 z-10"
             />
             <div class="flex flex-col-reverse">
-              <div v-if="$slots.content" ref="dialogContent" class="dialog-content" :style="{ maxHeight: contentHeight }">
+              <div
+                v-if="$slots.content"
+                ref="dialogContent"
+                class="dialog-content"
+                :class="{
+                  'p-0': props.noContentPadding,
+                  'p-6': !props.noContentPadding,
+                }"
+                :style="{ maxHeight: contentHeight }"
+              >
                 <slot name="content" />
               </div>
               <div v-if="$slots.header || props.title" ref="dialogHeader" class="dialog-header">
@@ -116,20 +130,19 @@ const handleClose = () => {
                       </h2>
                     </template>
                   </div>
-                  <div class="ml-auto">
-                    <button
-                      type="button"
-                      title="Close"
-                      class="btn flex items-center justify-center text-gray-900 rounded-full w-8 h-8 p-0 !outline-none transition-colors bg-transparent hover:bg-gray-200 focus:bg-gray-200"
-                      :disabled="props.busy"
-                      @click="() => handleClose()"
-                    >
-                      <IconClose class="h-5 w-5" />
-                    </button>
-                  </div>
+                  <Button
+                    class="ml-auto shrink-0"
+                    color="secondary"
+                    variant="ghost"
+                    shape="circle"
+                    title="Close"
+                    :disabled="props.busy"
+                    @click="handleClose"
+                  >
+                    <IconClose class="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-
             </div>
             <div>
               <div v-if="$slots.footer" ref="dialogFooter" class="dialog-footer">
@@ -170,7 +183,7 @@ const handleClose = () => {
   @apply block w-full border-t border-t-slate-200;
 }
 .dialog-content {
-  @apply block w-full overflow-y-auto overflow-x-hidden p-6;
+  @apply block w-full overflow-y-auto overflow-x-hidden;
 }
 
 .dialog-content::-webkit-scrollbar {
