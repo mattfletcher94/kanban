@@ -10,12 +10,19 @@ import IconAdd from '../Icons/IconAdd.vue'
 import CardLabel from '../CardLabel.vue'
 import IconBin from '../Icons/IconBin.vue'
 import IconOpen from '../Icons/IconOpen.vue'
-import Dialog from './Dialog.vue'
+import IconClose from '../Icons/IconClose.vue'
+import IconEllipsis from '../Icons/IconEllipsis.vue'
 import DialogLabelManagement from './DialogLabelManagement.vue'
+import DialogConfirm from './DialogConfirm.vue'
 import Checkbox from './../Inputs/Checkbox.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import FormGroup from '@/lucidui/form/FormGroup.vue'
 import FormControlTextarea from '@/lucidui/form/FormControlTextarea.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
+import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
+import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
 
 const props = defineProps<{
   card: Card | null
@@ -33,6 +40,7 @@ const boardsStore = useBoardsStore()
 const linksList = ref<any>()
 const todosList = ref<any>()
 const dialogLabelManagementOpen = ref(false)
+const dialogConfirmDeleteOpen = ref(false)
 
 const form = useForm<CardUpdate>({
   initialValues: {
@@ -92,6 +100,7 @@ const onClose = () => {
 }
 
 const onDeleteCard = () => {
+  dialogConfirmDeleteOpen.value = false
   emits('delete', props.card?.id || '')
 }
 
@@ -194,231 +203,329 @@ watch(() => props.open, () => {
 </script>
 
 <template>
-  <Dialog
+  <Modal
     :open="props.open"
     width="660px"
-    :no-content-padding="true"
-    @close="() => onClose()"
+    appearance="slideout"
+    @submit="onSubmit"
+    @close="onClose"
   >
     <template #header>
-      <FormGroup class="py-2">
-        <template #control="{ id }">
-          <FormControlTextarea
-            :id="id"
-            class="text-base font-bold -ml-1"
-            :inline="true"
-            :value="title"
-            :spellcheck="false"
-            placeholder="No title"
-            @change="(value) => title = value"
-          />
-        </template>
-      </FormGroup>
-    </template>
-    <template #content>
-      <div class="flex w-full">
-        <div class="flex flex-col gap-8 w-full p-6">
-
-          <!-- Description -->
-          <FormGroup>
-            <template #label>
-              Description
-            </template>
+      <ModalHeader>
+        <template #title>
+          <FormGroup class="py-2">
             <template #control="{ id }">
               <FormControlTextarea
                 :id="id"
-                :value="description"
+                class="text-lg font-bold"
                 :inline="true"
+                :value="title"
                 :spellcheck="false"
-                class="text-sm -ml-1"
-                placeholder="No description"
-                @change="(value) => description = value"
+                placeholder="No title"
+                @change="(value) => title = value"
               />
             </template>
           </FormGroup>
-
-          <!-- Todos -->
-          <FormGroup>
-            <template #label>
-              To-do list
-              ({{ todos?.filter(x => x.completed).length }}/{{ todos?.length }})
-            </template>
-            <template #control="{ id }">
-              <ul
-                v-if="todos && todos.length"
-                ref="todosList"
-                class="flex flex-col w-full rounded-lg overflow-hidden"
-              >
-                <li
-                  v-for="(todo) in todos"
-                  :key="todo.id"
-                  class="flex items-center gap-2 bg-white hover:bg-slate-50 rounded-lg p-1"
-                >
-                  <div class="shrink-0">
-                    <Checkbox
-                      :checked="todo.completed"
-                      @change="() => handleToggleTodoCompleted(todo.id)"
-                    />
-                  </div>
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="todo.description"
-                      :class="{ 'line-through': todo.completed }"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter description..."
-                      @change="(value) => todo.description = value"
-                    />
-                  </div>
-                  <div class="shrink-0">
-                    <Button class="text-slate-500" color="secondary" variant="ghost" size="sm" @click="handleDeleteTodo(todo.id)">
-                      <IconBin class="w-4 h-4" />
-                    </Button>
-                  </div>
-                </li>
-              </ul>
-              <div>
-                <Button
-                  :id="id"
-                  key="button"
-                  color="secondary"
-                  size="sm"
-                  class="justify-start"
-                  @click="() => handleClickAddTodoBtn()"
-                >
-                  <IconAdd class="w-4 h-4" />
-                  Add Todo
-                </Button>
-              </div>
-            </template>
-          </FormGroup>
-
-          <!-- Links -->
-          <FormGroup>
-            <template #label>
-              Links
-            </template>
-            <template #control="{ id }">
-              <ul
-                v-if="links && links.length"
-                ref="linksList"
-                class="flex flex-col divide-y divide-slate-300 w-full rounded-lg border border-slate-300 overflow-hidden"
-              >
-                <li
-                  v-for="(link) in links"
-                  :key="link.id"
-                  class="flex items-center gap-2 bg-white p-2"
-                >
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="link.name"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter link name..."
-                      @change="(value) => link.name = value"
-                    />
-                  </div>
-                  <div class="w-full">
-                    <FormControlTextarea
-                      :value="link.url"
-                      :spellcheck="false"
-                      :inline="true"
-                      placeholder="Enter link URL..."
-                      @change="(value) => link.url = value"
-                    />
-                  </div>
-                  <div class="ml-auto shrink-0">
-                    <Button
-                      v-tooltip="{ content: 'Open link in browser' }"
-                      as="a"
-                      color="secondary"
-                      size="sm"
-                      :href="link.url"
-                      target="_blank"
-                    >
-                      <IconOpen class="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div class="shrink-0">
-                    <Button
-                      color="secondary"
-                      size="sm"
-                      @click="handleDeleteLink(link.id)"
-                    >
-                      <IconBin class="w-4 h-4" />
-                    </Button>
-                  </div>
-                </li>
-              </ul>
+        </template>
+        <template #actions>
+          <Dropdown dropdown-width="180px" dropdown-placement="bottom-end">
+            <template #trigger="{ toggle }">
               <Button
-                :id="id"
-                class="mt-2"
+                class="ml-auto shrink-0"
                 color="secondary"
-                @click="() => handleClickAddLinkBtn()"
+                variant="ghost"
+                shape="circle"
+                title="Close"
+                @click="toggle"
+              >
+                <IconEllipsis class="h-5 w-5" />
+              </Button>
+            </template>
+            <template #options>
+              <DropdownOption @click="dialogConfirmDeleteOpen = true">
+                <template #label>
+                  Delete Card
+                </template>
+              </DropdownOption>
+            </template>
+          </Dropdown>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="onClose"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
+    </template>
+    <template #body>
+      <div class="p-6 w-full flex flex-col gap-6">
+        <!-- Labels -->
+        <FormGroup>
+          <template #label>
+            Labels
+          </template>
+          <template #control>
+            <div class="flex flex-wrap gap-2 w-full">
+              <CardLabel
+                v-for="label in selectedLabels"
+                :key="label.id"
+                class="min-h-[32px]"
+                :color="label.color"
+                :title="label.title"
+              >
+                {{ label.title }}
+              </CardLabel>
+              <Button
+                key="button"
+                color="secondary"
+                size="sm"
+                class="justify-start"
+                @click="() => dialogLabelManagementOpen = true"
+              >
+                <IconAdd class="w-4 h-4" />
+                Add Label
+              </Button>
+              <!--
+              <PopoverLabels
+                :selected-labels="labelIds || []"
+                @select="(labelId) => handleSelectLabel(labelId)"
+                @unselect="(labelId) => handleUnselectLabel(labelId)"
+                @create="(label) => handleSelectLabel(label.id)"
+              >
+                <template #trigger="{ toggle }">
+                  <Button
+                    key="button"
+                    color="secondary"
+                    size="sm"
+                    class="justify-start"
+                    @click="toggle"
+                  >
+                    <IconAdd class="w-4 h-4" />
+                    Add Label
+                  </Button>
+                </template>
+              </PopoverLabels>
+              -->
+
+            </div>
+          </template>
+        </FormGroup>
+
+        <!-- Description -->
+        <FormGroup>
+          <template #label>
+            Description
+          </template>
+          <template #control="{ id }">
+            <FormControlTextarea
+              :id="id"
+              :value="description"
+              :inline="true"
+              :spellcheck="false"
+              class="text-sm -ml-1"
+              placeholder="No description"
+              @change="(value) => description = value"
+            />
+          </template>
+        </FormGroup>
+
+        <!-- Todos -->
+        <FormGroup>
+          <template #label>
+            <div class="flex justify-between items-center">
+              To-do's
+              <Button
+                v-if="todos && todos.length"
+                key="button"
+                color="secondary"
+                size="sm"
+                variant="tonal"
+                @click="handleClickAddTodoBtn"
+              >
+                Add Todo
+                <IconAdd class="w-4 h-4" />
+              </Button>
+            </div>
+          </template>
+          <template #control>
+            <ul
+              v-if="todos && todos.length"
+              ref="todosList"
+              class="flex flex-col mt-1 divide-y divide-slate-200 w-full rounded-lg border border-slate-200 overflow-hidden"
+            >
+              <li
+                v-for="(todo) in todos"
+                :key="todo.id"
+                class="flex items-center gap-2 bg-white p-2"
+              >
+                <div class="shrink-0">
+                  <Checkbox
+                    size="sm"
+                    :checked="todo.completed"
+                    @change="() => handleToggleTodoCompleted(todo.id)"
+                  />
+                </div>
+                <div class="w-full">
+                  <FormControlTextarea
+                    :value="todo.description"
+                    :class="todo.completed ? 'line-through' : ''"
+                    :spellcheck="false"
+                    :inline="true"
+                    placeholder="Enter description..."
+                    @change="(value) => todo.description = value"
+                  />
+                </div>
+                <div class="shrink-0">
+                  <Button
+                    v-tooltip="{ content: 'Delete todo' }"
+                    class="text-slate-600"
+                    color="secondary"
+                    variant="ghost"
+                    size="sm"
+                    @click="handleDeleteTodo(todo.id)"
+                  >
+                    <IconBin class="w-4 h-4" />
+                  </Button>
+                </div>
+              </li>
+            </ul>
+            <div v-else>
+              <Button
+                key="button"
+                color="secondary"
+                size="sm"
+                @click="handleClickAddTodoBtn"
+              >
+                <IconAdd class="w-4 h-4" />
+                Add Todo
+              </Button>
+            </div>
+          </template>
+        </FormGroup>
+
+        <!-- Links -->
+        <FormGroup>
+          <template #label>
+            <div class="flex justify-between items-center">
+              Links
+              <Button
+                v-if="links && links.length"
+                key="button"
+                color="secondary"
+                size="sm"
+                variant="tonal"
+                @click="handleClickAddLinkBtn"
               >
                 Add Link
                 <IconAdd class="w-4 h-4" />
               </Button>
-            </template>
-          </FormGroup>
-        </div>
-        <div class="flex flex-col shrink-0 w-[180px] p-4 border-l border-l-slate-200">
-          <!-- Labels -->
-          <FormGroup>
-            <template #label>
-              Labels
-            </template>
-            <template #control="{ id }">
-              <div class="flex flex-col gap-2 w-full">
-                <CardLabel
-                  v-for="label in selectedLabels"
-                  :key="label.id"
-                  class="w-full min-h-[32px]"
-                  :color="label.color"
-                  :title="label.title"
-                >
-                  {{ label.title }}
-                </CardLabel>
-                <Button
-                  :id="id"
-                  key="button"
-                  color="secondary"
-                  size="sm"
-                  class="justify-start"
-                  @click="() => dialogLabelManagementOpen = true"
-                >
-                  <IconAdd class="w-4 h-4" />
-                  Add Label
-                </Button>
-              </div>
-            </template>
-          </FormGroup>
-        </div>
+            </div>
+          </template>
+          <template #control>
+            <ul
+              v-if="links && links.length"
+              ref="linksList"
+              class="flex flex-col mt-1 divide-y divide-slate-200 w-full rounded-lg border border-slate-200 overflow-hidden"
+            >
+              <li
+                v-for="(link) in links"
+                :key="link.id"
+                class="flex items-center gap-2 bg-white p-2"
+              >
+                <div class="w-full">
+                  <FormControlTextarea
+                    :value="link.name"
+                    :spellcheck="false"
+                    :inline="true"
+                    placeholder="Enter link name..."
+                    @change="(value) => link.name = value"
+                  />
+                </div>
+                <div class="w-full">
+                  <FormControlTextarea
+                    :value="link.url"
+                    :spellcheck="false"
+                    :inline="true"
+                    placeholder="Enter link URL..."
+                    @change="(value) => link.url = value"
+                  />
+                </div>
+                <div class="ml-auto shrink-0">
+                  <Button
+                    v-tooltip="{ content: 'Open link in browser' }"
+                    class="text-slate-600"
+                    as="a"
+                    color="secondary"
+                    variant="ghost"
+                    size="sm"
+                    :href="link.url"
+                    target="_blank"
+                  >
+                    <IconOpen class="w-4 h-4" />
+                  </Button>
+                </div>
+                <div class="shrink-0">
+                  <Button
+                    v-tooltip="{ content: 'Delete link' }"
+                    class="text-slate-600"
+                    color="secondary"
+                    variant="ghost"
+                    size="sm"
+                    @click="handleDeleteLink(link.id)"
+                  >
+                    <IconBin class="w-4 h-4" />
+                  </Button>
+                </div>
+              </li>
+            </ul>
+            <div v-else>
+              <Button
+                key="button"
+                color="secondary"
+                size="sm"
+                @click="handleClickAddLinkBtn"
+              >
+                <IconAdd class="w-4 h-4" />
+                Add Link
+              </Button>
+            </div>
+          </template>
+        </FormGroup>
       </div>
     </template>
-
     <template #footer>
-      <!-- Buttons -->
-      <div class="flex items-center justify-between gap-4 px-6 py-4">
-        <Button color="danger" variant="ghost" @click="onDeleteCard()">
-          Delete card
-        </Button>
-        <Button
-          :disabled="!form.meta.value.valid"
-          @click="onSubmit()"
-        >
-          Save changes
-        </Button>
-      </div>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            color="primary"
+            type="submit"
+            :disabled="!form.meta.value.valid"
+          >
+            Save changes
+          </Button>
+        </template>
+      </ModalFooter>
     </template>
-  </Dialog>
+  </Modal>
   <DialogLabelManagement
     :open="dialogLabelManagementOpen"
     :selected-labels="labelIds || []"
     @select="(labelId) => handleSelectLabel(labelId)"
     @unselect="(labelId) => handleUnselectLabel(labelId)"
     @create="(label) => handleSelectLabel(label.id)"
-    @close="() => dialogLabelManagementOpen = false"
+    @close="dialogLabelManagementOpen = false"
+  />
+  <DialogConfirm
+    title="Delete Card"
+    message="Are you sure you want to delete this card (no undo)?"
+    :open="dialogConfirmDeleteOpen"
+    @cancel="dialogConfirmDeleteOpen = false"
+    @confirm="onDeleteCard"
   />
 </template>
 

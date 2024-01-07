@@ -3,7 +3,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
 import { POSITION, useToast } from 'vue-toastification'
-import IconEye from '../components/Icons/IconEye.vue'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCardMinimal from '../components/Dialogs/DialogCreateCardMinimal.vue'
@@ -17,15 +16,19 @@ import IconConfig from '../components/Icons/IconConfig.vue'
 import IconHandle from '../components/Icons/IconHandle.vue'
 import IconBin from '../components/Icons/IconBin.vue'
 import IconOpen from '../components/Icons/IconOpen.vue'
+import IconExport from '../components/Icons/IconExport.vue'
+import IconImport from '../components/Icons/IconImport.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import IconPencil from '../components/Icons/IconPencil.vue'
 import Checkbox from '../components/Inputs/Checkbox.vue'
 import { useBoardsStore } from './../stores/boards'
 import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
+import DialogConfirm from '@/components/Dialogs/DialogConfirm.vue'
+import DialogExportBoard from '@/components/Dialogs/DialogExportBoard.vue'
+import DialogImportBoard from '@/components/Dialogs/DialogImportBoard.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
 import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,9 +45,11 @@ const isCreateDialogOpen = ref(false)
 const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
 const isViewSettingsDialogOpen = ref(false)
+const isExportDialogOpen = ref(false)
+const isImportDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
+const deleteColumnCandidate = ref<Column | null>(null)
 const createCardColumnCandidate = ref<string | null>(null)
-const isTestModalOpen = ref(false)
 
 const editCardCandidate = ref<Card | null>(null)
 
@@ -97,8 +102,11 @@ const handleUpdateColumn = (column: ColumnUpdate) => {
   editColumnCandidate.value = null
 }
 
-const handleDeleteColumn = (columnId: string) => {
-  boardsStore.deleteColumn(columnId)
+const handleDeleteColumn = () => {
+  if (!deleteColumnCandidate.value)
+    return
+  boardsStore.deleteColumn(deleteColumnCandidate.value.id)
+  deleteColumnCandidate.value = null
 }
 
 const handleCreateCard = (card: CardCreate) => {
@@ -299,13 +307,13 @@ watch(() => columns.value.length, () => {
       <!-- Header -->
       <header class="relative block w-full text-base z-20 bg-white shadow-md">
         <div class="flex items-center gap-4 w-full h-16 px-4">
-          <div class="flex items-center justify-center w-8 h-8">
+          <div class="shrink-0 flex items-center justify-center w-8 h-8">
             <img src="/logo-256x256.png" class="w-full h-full object-cover object-center">
           </div>
-          <Dropdown class="shrink-0" dropdown-width="cover">
+          <Dropdown class="w-full max-w-[270px]" dropdown-width="cover">
             <template #trigger="{ toggle }">
               <Button
-                class="w-[270px] justify-start"
+                class="w-full justify-start"
                 color="secondary"
                 @click="toggle"
               >
@@ -348,7 +356,7 @@ watch(() => columns.value.length, () => {
             <Button
               color="secondary"
               title="Add Column"
-              @click="isTestModalOpen = !isTestModalOpen"
+              @click="isCreateColumnDialogOpen = true"
             >
               Add Column
               <IconAdd class="w-4 h-4" />
@@ -362,10 +370,17 @@ watch(() => columns.value.length, () => {
             </Button>
             <Button
               color="secondary"
-              @click="isViewSettingsDialogOpen = true"
+              @click="isExportDialogOpen = true"
             >
-              View Settings
-              <IconEye class="w-4 h-4" />
+              Export
+              <IconExport class="w-4 h-4" />
+            </Button>
+            <Button
+              color="secondary"
+              @click="isImportDialogOpen = true"
+            >
+              Import
+              <IconImport class="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -447,7 +462,7 @@ watch(() => columns.value.length, () => {
                             Edit Column
                           </template>
                         </DropdownOption>
-                        <DropdownOption @click="handleDeleteColumn(column.id)">
+                        <DropdownOption @click="deleteColumnCandidate = column">
                           <template #start>
                             <IconBin class="block w-4 h-4" />
                           </template>
@@ -665,6 +680,28 @@ watch(() => columns.value.length, () => {
         @delete="(cardId) => handleDeleteCard(cardId)"
       />
 
+      <!-- Export -->
+      <DialogExportBoard
+        :open="isExportDialogOpen"
+        :board-id="board.id"
+        @close="isExportDialogOpen = false"
+      />
+
+      <!-- Import -->
+      <DialogImportBoard
+        :open="isImportDialogOpen"
+        @close="isImportDialogOpen = false"
+      />
+
+      <!-- Confirm delete column dialog -->
+      <DialogConfirm
+        :title="`Delete column ${deleteColumnCandidate?.title}?`"
+        message="Are you sure you want to delete this column? All cards in this column will be deleted."
+        :open="!!deleteColumnCandidate"
+        @cancel="deleteColumnCandidate = null"
+        @confirm="handleDeleteColumn"
+      />
+
     </template>
 
     <!-- No boards (this should not happen) -->
@@ -688,11 +725,6 @@ watch(() => columns.value.length, () => {
       :open="isCreateDialogOpen"
       @close="isCreateDialogOpen = false"
       @create="(board) => handleCreateBoard(board)"
-    />
-
-    <Modal
-      :open="isTestModalOpen"
-      @close="isTestModalOpen = false"
     />
 
   </div>

@@ -4,7 +4,10 @@ import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { unref, watch } from 'vue'
 import type { CardCreate } from '../../stores/boards'
-import Dialog from './Dialog.vue'
+import IconClose from '../Icons/IconClose.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import FormGroup from '@/lucidui/form/FormGroup.vue'
 import FormControlText from '@/lucidui/form/FormControlText.vue'
@@ -63,14 +66,32 @@ watch(() => [props.open, props.columnId], () => {
 </script>
 
 <template>
-  <Dialog
-    title="Add card"
+  <Modal
     width="420px"
     :open="props.open"
-    @close="() => onClose()"
+    @submit="onSubmit"
+    @close="onClose"
   >
-    <template #content>
-      <form @submit.prevent="() => onSubmit()">
+    <template #header>
+      <ModalHeader>
+        <template #title>
+          Add Card
+        </template>
+        <template #actions>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="onClose"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
+    </template>
+    <template #body>
+      <div class="p-6">
         <FormGroup>
           <template #label>
             Title *
@@ -88,11 +109,22 @@ watch(() => [props.open, props.columnId], () => {
             {{ form.errors.value.title }}
           </template>
         </FormGroup>
-        <Button class="w-full mt-6" type="submit">
-          Create Column
-        </Button>
-      </form>
+      </div>
     </template>
-  </Dialog>
+    <template #footer>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            color="primary"
+            type="submit"
+            :disabled="!form.meta.value.valid"
+          >
+            Add Card
+          </Button>
+        </template>
+      </ModalFooter>
+    </template>
+  </Modal>
 </template>
 

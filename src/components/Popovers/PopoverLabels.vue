@@ -15,7 +15,6 @@ import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 import Popover from '@/lucidui/popovers/Popover.vue'
 
 const props = defineProps<{
-  open: boolean
   selectedLabels: string[]
 }>()
 
@@ -78,41 +77,34 @@ const onClose = () => {
 </script>
 
 <template>
-  <Modal
-    width="360px"
-    appearance="slideout"
-    :open="props.open"
-    @submit="onClose"
-    @close="onClose"
+  <Popover
+    popover-width="320px"
+    popover-placement="bottom"
   >
-    <template #header>
-      <ModalHeader>
-        <template #title>
-          Labels
-        </template>
-        <template #actions>
-          <Button
-            color="secondary"
-            variant="ghost"
-            shape="circle"
-            type="button"
-            @click="onClose"
-          >
-            <IconClose class="w-5 h-5" />
-          </Button>
-        </template>
-      </ModalHeader>
+    <template
+      #trigger="{
+        open: openPopover,
+        toggle,
+        isOpen,
+      }"
+    >
+      <slot
+        name="trigger"
+        :open="openPopover"
+        :toggle="toggle"
+        :is-open="isOpen"
+      />
     </template>
-    <template #body>
-      <div class="p-6 block w-full">
+    <template #content>
+      <div class="block w-full">
         <SmoothReflow>
-          <ul ref="labelList" class="flex flex-col gap-2 w-full">
+          <ul ref="labelList" class="flex flex-col w-full p-4 gap-3">
             <li
               v-for="(label) in labels"
               :key="label.id"
               class="flex items-center"
             >
-              <div class="w-full flex items-center gap-2 border border-gray-300 p-2 rounded-lg">
+              <div class="w-full flex items-center gap-2 p-2 border border-slate-200 rounded-lg">
                 <div class="shrink-0">
                   <Checkbox
                     size="sm"
@@ -177,7 +169,6 @@ const onClose = () => {
                 </div>
                 <div class="shrink-0">
                   <Button
-                    v-tooltip="{ content: 'Delete label from application' }"
                     class="text-slate-600"
                     color="secondary"
                     variant="ghost"
@@ -202,20 +193,7 @@ const onClose = () => {
         </Button>
       </div>
     </template>
-    <template #footer>
-      <ModalFooter>
-        <template #actions>
-          <Button
-            class="w-full"
-            color="primary"
-            type="submit"
-          >
-            Done
-          </Button>
-        </template>
-      </ModalFooter>
-    </template>
-  </Modal>
+  </Popover>
 </template>
 
 <style scoped>

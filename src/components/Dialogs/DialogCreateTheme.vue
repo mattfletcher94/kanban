@@ -7,7 +7,10 @@ import { useToast } from 'vue-toastification'
 import type { Theme, ThemeCreate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
 import IconFolder from '../Icons/IconFolder.vue'
-import Dialog from './Dialog.vue'
+import IconClose from '../Icons/IconClose.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import FormGroup from '@/lucidui/form/FormGroup.vue'
 import FormControlText from '@/lucidui/form/FormControlText.vue'
@@ -76,14 +79,32 @@ watch(() => [props.open], () => {
 </script>
 
 <template>
-  <Dialog
-    title="Create Theme"
+  <Modal
     width="420px"
     :open="props.open"
-    @close="() => emits('close')"
+    @submit="onSubmit()"
+    @close="emits('close')"
   >
-    <template #content>
-      <form @submit.prevent="() => onSubmit()">
+    <template #header>
+      <ModalHeader>
+        <template #title>
+          Create Theme
+        </template>
+        <template #actions>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="emits('close')"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
+    </template>
+    <template #body>
+      <div class="p-6">
         <FormGroup>
           <template #label>
             Title *
@@ -141,13 +162,21 @@ watch(() => [props.open], () => {
             </Button>
           </div>
         </div>
-        <div class="flex w-full mt-6">
-          <Button class="w-full" type="submit">
+      </div>
+    </template>
+    <template #footer>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            type="submit"
+            :disabled="!form.meta.value.valid"
+          >
             Create Theme
           </Button>
-        </div>
-      </form>
+        </template>
+      </ModalFooter>
     </template>
-  </Dialog>
+  </Modal>
 </template>
 

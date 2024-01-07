@@ -73,3 +73,52 @@ export const deleteImage = async (event, path) => {
     console.warn(error)
   }
 }
+
+export const downloadJson = async (event, data: {
+  filename: string
+  json: string
+}) => {
+  const { filename, json } = data
+
+  const result = await dialog.showSaveDialog({
+    defaultPath: filename,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+
+  if (result.canceled || result.filePath === undefined) {
+    return {
+      result: 'canceled',
+    }
+  }
+  try {
+    await fs.promises.writeFile(result.filePath, json)
+    return {
+      result: 'success',
+    }
+  }
+  catch (error) {
+    return {
+      result: 'error',
+    }
+  }
+}
+
+export const selectJson = async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Downloads', extensions: ['json'] }],
+  })
+
+  if (result.canceled || result.filePaths.length === 0)
+    return null
+
+  const filePath = result.filePaths[0]
+
+  // Read the file into a buffer
+  const fileContent = await fs.promises.readFile(filePath)
+
+  // Return image to renderer process
+  return {
+    data: JSON.parse(fileContent.toString('utf8')),
+  }
+}

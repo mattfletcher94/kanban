@@ -2,13 +2,18 @@
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
-import { computed, ref, unref, watch } from 'vue'
+import { ref, unref, watch } from 'vue'
 import type { Board, BoardUpdate, Theme } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
 import IconBin from '../Icons/IconBin.vue'
 import IconEllipsis from '../Icons/IconEllipsis.vue'
-import Dialog from './Dialog.vue'
+import IconClose from '../Icons/IconClose.vue'
+import Switch from '../Inputs/Switch.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
+import DialogConfirm from './DialogConfirm.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import FormGroup from '@/lucidui/form/FormGroup.vue'
 import FormControlText from '@/lucidui/form/FormControlText.vue'
@@ -35,21 +40,57 @@ const form = useForm<BoardUpdate>({
     id: unref(props.board.id),
     title: unref(props.board.title),
     themeId: unref(props.board.themeId),
+    viewSettings: unref(props.board.viewSettings || {
+      hideLabels: false,
+      hideDescription: false,
+      hideLinks: false,
+      hideTodos: false,
+    }),
   },
   validationSchema: toTypedSchema(zod.object({
     id: zod.string().min(1, 'Id is required'),
     title: zod.string().min(1, 'Title is required'),
     themeId: zod.string().min(1, 'Theme is required'),
+    viewSettings: zod.object({
+      hideLabels: zod.boolean().default(false),
+      hideDescription: zod.boolean().default(false),
+      hideLinks: zod.boolean().default(false),
+      hideTodos: zod.boolean().default(false),
+    }).optional().default({
+      hideLabels: false,
+      hideDescription: false,
+      hideLinks: false,
+      hideTodos: false,
+    }),
   })),
 })
 
 const title = form.useFieldModel('title')
 const themeId = form.useFieldModel('themeId')
+const viewSettings = form.useFieldModel('viewSettings')
+
 const isCreateThemeDialogOpen = ref(false)
+const isDeleteBoardDialogOpen = ref(false)
 
 const onSubmit = form.handleSubmit((values) => {
   emit('save', values)
 })
+
+const onUpdateViewSettings = (
+  key: 'hideLabels' | 'hideDescription' | 'hideLinks' | 'hideTodos',
+  value: boolean,
+) => {
+  if (!viewSettings.value) {
+    viewSettings.value = {
+      hideLabels: false,
+      hideDescription: false,
+      hideLinks: false,
+      hideTodos: false,
+    }
+  }
+
+  viewSettings.value[key] = value
+}
 
 const onCreateTheme = (theme: Theme) => {
   isCreateThemeDialogOpen.value = false
@@ -75,47 +116,60 @@ watch(() => props.open, () => {
       id: unref(props.board.id),
       title: unref(props.board.title),
       themeId: unref(props.board.themeId),
+      viewSettings: unref(props.board.viewSettings),
     })
   }
 })
 </script>
 
 <template>
-  <Dialog
-    width="480px"
+  <Modal
+    width="450px"
     :open="props.open"
-    @close="() => emit('close')"
+    @submit="onSubmit"
+    @close="emit('close')"
   >
     <template #header>
-      <div class="flex items-center w-full">
-        <h2 class="text-base font-bold">
+      <ModalHeader>
+        <template #title>
           Edit Board
-        </h2>
-        <Dropdown class="ml-auto" dropdown-width="180px" dropdown-placement="bottom-end">
-          <template #trigger="{ toggle }">
-            <Button
-              class="ml-auto shrink-0"
-              color="secondary"
-              variant="ghost"
-              shape="circle"
-              title="Close"
-              @click="toggle"
-            >
-              <IconEllipsis class="h-5 w-5" />
-            </Button>
-          </template>
-          <template #options>
-            <DropdownOption @click="() => emit('delete', props.board.id)">
-              <template #label>
-                Delete Board
-              </template>
-            </DropdownOption>
-          </template>
-        </Dropdown>
-      </div>
+        </template>
+        <template #actions>
+          <Dropdown dropdown-width="180px" dropdown-placement="bottom-end">
+            <template #trigger="{ toggle }">
+              <Button
+                class="ml-auto shrink-0"
+                color="secondary"
+                variant="ghost"
+                shape="circle"
+                title="Close"
+                @click="toggle"
+              >
+                <IconEllipsis class="h-5 w-5" />
+              </Button>
+            </template>
+            <template #options>
+              <DropdownOption @click="isDeleteBoardDialogOpen = true">
+                <template #label>
+                  Delete Board
+                </template>
+              </DropdownOption>
+            </template>
+          </Dropdown>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="emit('close')"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
     </template>
-    <template #content>
-      <form @submit.prevent="() => onSubmit()">
+    <template #body>
+      <div class="p-6">
         <FormGroup>
           <template #label>
             Title *
@@ -186,21 +240,67 @@ watch(() => props.open, () => {
             {{ form.errors.value.themeId }}
           </template>
         </FormGroup>
-        <Button
-          class="mt-6 w-full"
-          color="primary"
-          type="submit"
-          :disabled="!form.meta.value.valid"
-        >
-          Save changes
-        </Button>
-      </form>
+        <FormGroup class="mt-6">
+          <template #label>
+            View settings
+          </template>
+          <template #control>
+            <div class="flex flex-col gap-2 items-start mt-2">
+              <Switch
+                :checked="!(viewSettings?.hideLabels || false)"
+                @change="(value) => onUpdateViewSettings('hideLabels', !value)"
+              >
+                Show card labels
+              </Switch>
+              <Switch
+                :checked="!(viewSettings?.hideDescription || false)"
+                @change="(value) => onUpdateViewSettings('hideDescription', !value)"
+              >
+                Show card description
+              </Switch>
+              <Switch
+                :checked="!(viewSettings?.hideLinks || false)"
+                @change="(value: boolean) => onUpdateViewSettings('hideLinks', !value)"
+              >
+                Show card links
+              </Switch>
+              <Switch
+                :checked="!(viewSettings?.hideTodos || false)"
+                @change="(value) => onUpdateViewSettings('hideTodos', !value)"
+              >
+                Show card todos
+              </Switch>
+            </div>
+          </template>
+        </FormGroup>
+      </div>
     </template>
-  </Dialog>
+    <template #footer>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            color="primary"
+            type="submit"
+            :disabled="!form.meta.value.valid"
+          >
+            Save changes
+          </Button>
+        </template>
+      </ModalFooter>
+    </template>
+  </Modal>
   <DialogCreateTheme
     :open="isCreateThemeDialogOpen"
-    @create="(theme: Theme) => onCreateTheme(theme)"
+    @create="(theme) => onCreateTheme(theme)"
     @close="isCreateThemeDialogOpen = false"
+  />
+  <DialogConfirm
+    title="`Delete board"
+    message="Are you sure you want to delete this board (no undo)?"
+    :open="isDeleteBoardDialogOpen"
+    @cancel="isDeleteBoardDialogOpen = false"
+    @confirm="emit('delete', props.board.id)"
   />
 </template>
 

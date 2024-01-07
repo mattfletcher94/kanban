@@ -6,6 +6,10 @@ export const API = {
     upload: base64 => ipcRenderer.invoke('upload-image', base64),
     delete: path => ipcRenderer.invoke('delete-image', path),
   },
+  importer: {
+    export: data => ipcRenderer.invoke('download-json', data),
+    select: () => ipcRenderer.invoke('select-json'),
+  },
 }
 
 contextBridge.exposeInMainWorld('api', API)

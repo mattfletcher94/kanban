@@ -154,7 +154,7 @@ defineExpose({
 <template>
   <div
     ref="templateRefPopover"
-    class="popover"
+    class="popover relative inline-flex"
   >
     <slot
       name="trigger"
@@ -175,11 +175,11 @@ defineExpose({
         <span
           v-if="isOpen"
           ref="templateRefPopper"
-          class="popover__popper"
+          class="popover__popper pointer-events-none z-[110]"
         >
           <div
             ref="templateRefPopperCard"
-            class="popover__popper__card"
+            class="popover__popper__card block overflow-hidden bg-white opacity-100 rounded-lg  shadow-lg ring-1 ring-black/5 max-h-[100%] pointer-events-auto scale-100"
             tabindex="-1"
             :style="{
               'width': popoverWidthCalculated,
@@ -202,45 +202,22 @@ defineExpose({
   </div>
 </template>
 
-<style lang="scss">
-.popover {
-    position: relative;
-    display: inline-flex;
-
-    &__popper {
-        pointer-events: none;
-        z-index: var(--lucid-dropdown-z-index);
-
-        &__card {
-            display: block;
-            overflow: hidden;
-            opacity: 1;
-            background-color: rgba(255, 255, 255, 1);
-            box-shadow: 0 0 0 1px rgba(0,0,0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            border-radius: var(--lucid-rounded-md);
-            max-height: 100%;
-            pointer-events: initial;
-            transform: scale(1);
-        }
-    }
-
-}
-
+<style>
 .popover__popper-enter-active .popover__popper__card {
     transition: all 240ms
 }
 
 .popover__popper-leave-active .popover__popper__card {
-    transition: all 240ms
+    transition: all 120ms;
 }
 
 .popover__popper-enter-from .popover__popper__card {
-    transform: scale(0.9);
+    transform: scale(0.975);
     opacity: 0;
 }
 
 .popover__popper-leave-to .popover__popper__card {
-    transform: scale(0.9);
+    transform: scale(0.975);
     opacity: 0;
 }
 </style>

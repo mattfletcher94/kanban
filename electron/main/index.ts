@@ -3,7 +3,7 @@ import { join } from 'path'
 import { BrowserWindow, app, ipcMain, protocol, shell } from 'electron'
 import windowStateKeeper from 'electron-window-state'
 import contextMenu from 'electron-context-menu'
-import { deleteImage, selectImage, uploadImage } from './handles'
+import { deleteImage, downloadJson, selectImage, selectJson, uploadImage } from './handles'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1'))
@@ -119,4 +119,5 @@ app.on('activate', () => {
 ipcMain.handle('select-image', selectImage)
 ipcMain.handle('upload-image', uploadImage)
 ipcMain.handle('delete-image', deleteImage)
-
+ipcMain.handle('download-json', downloadJson)
+ipcMain.handle('select-json', selectJson)

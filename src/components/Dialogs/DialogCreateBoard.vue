@@ -6,12 +6,15 @@ import { ref, watch } from 'vue'
 import type { BoardCreate, Theme } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
 import IconBin from '../Icons/IconBin.vue'
-import Dialog from './Dialog.vue'
+import IconClose from '../Icons/IconClose.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
 import Button from '@/lucidui/buttons/Button.vue'
 import FormGroup from '@/lucidui/form/FormGroup.vue'
 import FormControlText from '@/lucidui/form/FormControlText.vue'
 import FormControlSelect from '@/lucidui/form/FormControlSelect.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 
 const props = defineProps<{
   open: boolean
@@ -72,14 +75,32 @@ watch(() => props.open, () => {
 </script>
 
 <template>
-  <Dialog
-    title="Create Board"
+  <Modal
     width="450px"
     :open="props.open"
-    @close="onClose()"
+    @close="onClose"
+    @submit="onSubmit"
   >
-    <template #content>
-      <form @submit.prevent="onSubmit()">
+    <template #header>
+      <ModalHeader>
+        <template #title>
+          Create Board
+        </template>
+        <template #actions>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="onClose"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
+    </template>
+    <template #body>
+      <div class="p-6">
         <FormGroup>
           <template #label>
             Title *
@@ -146,21 +167,30 @@ watch(() => props.open, () => {
               </Button>
             </div>
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.themeId" #error>
+          <template
+            v-if="form.submitCount.value > 0 && form.errors.value.themeId"
+            #error
+          >
             {{ form.errors.value.themeId }}
           </template>
         </FormGroup>
-        <Button
-          class="mt-6 w-full"
-          color="primary"
-          type="submit"
-          :disabled="!form.meta.value.valid"
-        >
-          Create Board
-        </Button>
-      </form>
+      </div>
     </template>
-  </Dialog>
+    <template #footer>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            color="primary"
+            type="submit"
+            :disabled="!form.meta.value.valid"
+          >
+            Create Board
+          </Button>
+        </template>
+      </ModalFooter>
+    </template>
+  </Modal>
   <DialogCreateTheme
     :open="isCreateThemeDialogOpen"
     @create="(theme) => onCreateTheme(theme)"

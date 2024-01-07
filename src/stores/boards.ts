@@ -2,64 +2,93 @@ import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { v4 as uuidv4 } from 'uuid'
 import moment from 'moment'
+import { z } from 'zod'
 import { themes } from '../data/themes'
 import { labels as defaultLabels } from '../data/labels'
 import { boards as defaultBoards, cards as defaultCards, columns as defaultColumns } from '../data/boards'
 
-export interface Card {
-  id: string
-  columnId: string
-  labelIds: string[]
-  title: string
-  description?: string
-  links?: Array<{ id: string; name: string; url: string }>
-  todos?: Array<{ id: string; description: string; completed: boolean }>
-  order: number
-  dateCreated: string
-  dateUpdated: string
-}
+export const CardSchema = z.object({
+  id: z.string(),
+  columnId: z.string(),
+  labelIds: z.array(z.string()),
+  title: z.string(),
+  description: z.string().optional(),
+  links: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    url: z.string(),
+  })).optional(),
+  todos: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    completed: z.boolean(),
+  })).optional(),
+  order: z.number(),
+  dateCreated: z.string(),
+  dateUpdated: z.string(),
+})
 
-export interface Column {
-  id: string
-  boardId: string
-  title: string
-  order: number
-  dateCreated: string
-  dateUpdated: string
-}
+export type Card = z.infer<typeof CardSchema>
 
-export interface Board {
-  id: string
-  themeId: string
-  title: string
-  viewSettings?: {
-    hideLabels?: boolean
-    hideDescription?: boolean
-    hideLinks?: boolean
-    hideTodos?: boolean
-  }
-  description?: string
-  dateCreated: string
-  dateUpdated: string
-}
+export const ColumnSchema = z.object({
+  id: z.string(),
+  boardId: z.string(),
+  title: z.string(),
+  order: z.number(),
+  dateCreated: z.string(),
+  dateUpdated: z.string(),
+})
 
-export interface Theme {
-  id: string
-  title: string
-  image: string
-  thumbnail: string
-  isCustom?: boolean
-  dateCreated?: string
-  dateUpdated?: string
-}
+export type Column = z.infer<typeof ColumnSchema>
 
-export interface Label {
-  id: string
-  title: string
-  color: string
-  dateCreated: string
-  dateUpdated: string
-}
+export const BoardSchema = z.object({
+  id: z.string(),
+  themeId: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  viewSettings: z.object({
+    hideLabels: z.boolean().optional(),
+    hideDescription: z.boolean().optional(),
+    hideLinks: z.boolean().optional(),
+    hideTodos: z.boolean().optional(),
+  }).optional(),
+  dateCreated: z.string(),
+  dateUpdated: z.string(),
+})
+
+export type Board = z.infer<typeof BoardSchema>
+
+export const ThemeSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  image: z.string(),
+  thumbnail: z.string(),
+  isCustom: z.boolean().optional(),
+  dateCreated: z.string().optional(),
+  dateUpdated: z.string().optional(),
+})
+
+export type Theme = z.infer<typeof ThemeSchema>
+
+export const LabelSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  color: z.string(),
+  dateCreated: z.string(),
+  dateUpdated: z.string(),
+})
+
+export const ImportSchema = z.object({
+  exportedAt: z.string(),
+  board: BoardSchema,
+  columns: z.array(ColumnSchema),
+  cards: z.array(CardSchema),
+  labels: z.array(LabelSchema),
+})
+
+export type Import = z.infer<typeof ImportSchema>
+
+export type Label = z.infer<typeof LabelSchema>
 
 export type BoardCreate = Omit<Board, 'id' | 'dateCreated' | 'dateUpdated'>
 
@@ -114,10 +143,10 @@ export const useBoardsStore = defineStore({
   actions: {
     createBoard(board: BoardCreate) {
       const newBoard = {
-        id: uuidv4(),
         dateCreated: moment().format(),
         dateUpdated: moment().format(),
         ...board,
+        id: uuidv4(),
       }
       this.boards.push(newBoard)
       return newBoard
@@ -134,7 +163,7 @@ export const useBoardsStore = defineStore({
     },
     deleteBoard(boardId: string) {
       // Find all columns belonging to the board
-      const columns = this.columns.filter(({ id }) => boardId === id)
+      const columns = this.columns.filter(({ boardId: columnBoardId }) => columnBoardId === boardId)
 
       // Find all cards belonging to the board
       const cards = this.cards.filter(({ columnId }) => columns.some(({ id }) => id === columnId))
@@ -151,10 +180,10 @@ export const useBoardsStore = defineStore({
 
     createColumn(column: ColumnCreate) {
       const entity = {
+        ...column,
         id: uuidv4(),
         dateCreated: moment().format(),
         dateUpdated: moment().format(),
-        ...column,
       }
       this.columns.push(entity)
       return entity
@@ -279,6 +308,82 @@ export const useBoardsStore = defineStore({
       // Remove theme
       this.themes = this.themes.filter(({ id }) => id !== themeId)
     },
+    importBoard(data: Import, options: {
+      mode: 'new' | 'overwrite'
+    }) {
+      if (options.mode === 'new') {
+        data.board.id = uuidv4()
 
+        data.cards.forEach((card) => {
+          card.id = uuidv4()
+        })
+
+        data.columns.forEach((column) => {
+          const newColumnId = uuidv4()
+
+          data.cards.forEach((card) => {
+            if (card.columnId === column.id)
+              card.columnId = newColumnId
+          })
+
+          column.id = newColumnId
+          column.boardId = data.board.id
+        })
+
+        // Import labels attached to cards,
+        // but only if they don't exist yet
+        // and search by title, not id
+        data.labels.forEach((label) => {
+          const existingLabel = this.labels.find(({ title, color }) => title === label.title && color === label.color)
+          if (existingLabel) {
+            data.cards.forEach((card) => {
+              if (card.labelIds.includes(label.id))
+                card.labelIds = card.labelIds.map(id => id === label.id ? existingLabel.id : id)
+            })
+            return
+          }
+          const newLabelId = uuidv4()
+          data.cards.forEach((card) => {
+            if (card.labelIds.includes(label.id))
+              card.labelIds = card.labelIds.map(id => id === label.id ? newLabelId : id)
+          })
+          label.id = newLabelId
+          this.labels.push(label)
+        })
+
+        this.boards.push(data.board)
+        this.columns.push(...data.columns)
+        this.cards.push(...data.cards)
+
+        return data.board.id
+      }
+      else if (options.mode === 'overwrite') {
+        this.deleteBoard(data.board.id)
+
+        data.labels.forEach((label) => {
+          const existingLabel = this.labels.find(({ title, color }) => title === label.title && color === label.color)
+          if (existingLabel) {
+            data.cards.forEach((card) => {
+              if (card.labelIds.includes(label.id))
+                card.labelIds = card.labelIds.map(id => id === label.id ? existingLabel.id : id)
+            })
+            return
+          }
+          const newLabelId = uuidv4()
+          data.cards.forEach((card) => {
+            if (card.labelIds.includes(label.id))
+              card.labelIds = card.labelIds.map(id => id === label.id ? newLabelId : id)
+          })
+          label.id = newLabelId
+          this.labels.push(label)
+        })
+
+        this.boards.push(data.board)
+        this.columns.push(...data.columns)
+        this.cards.push(...data.cards)
+
+        return data.board.id
+      }
+    },
   },
 })

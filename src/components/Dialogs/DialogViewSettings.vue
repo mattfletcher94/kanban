@@ -3,10 +3,13 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as zod from 'zod'
 import { ref, unref, watch } from 'vue'
-import type { Board, BoardUpdate, Theme } from '../../stores/boards'
+import type { Board, BoardUpdate } from '../../stores/boards'
+import IconClose from '../Icons/IconClose.vue'
 import Switch from '../Inputs/Switch.vue'
-import Dialog from './Dialog.vue'
 import Button from '@/lucidui/buttons/Button.vue'
+import Modal from '@/lucidui/modals/Modal.vue'
+import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
+import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
 
 const props = defineProps<{
   open: boolean
@@ -78,14 +81,32 @@ watch(() => props.open, () => {
 </script>
 
 <template>
-  <Dialog
-    title="View settings"
+  <Modal
     width="360px"
     :open="props.open"
-    @close="() => emit('close')"
+    @submit="onSubmit"
+    @close="emit('close')"
   >
-    <template #content>
-      <form @submit.prevent="() => onSubmit()">
+    <template #header>
+      <ModalHeader>
+        <template #title>
+          View settings
+        </template>
+        <template #actions>
+          <Button
+            color="secondary"
+            variant="ghost"
+            shape="circle"
+            type="button"
+            @click="emit('close')"
+          >
+            <IconClose class="w-5 h-5" />
+          </Button>
+        </template>
+      </ModalHeader>
+    </template>
+    <template #body>
+      <div class="p-6">
         <div class="flex flex-col gap-4 items-start">
           <Switch
             :checked="!(viewSettings?.hideLabels || false)"
@@ -112,11 +133,21 @@ watch(() => props.open, () => {
             Show card todos
           </Switch>
         </div>
-        <Button class="w-full mt-6" type="submit">
-          Save changes
-        </Button>
-      </form>
+      </div>
     </template>
-  </Dialog>
+    <template #footer>
+      <ModalFooter>
+        <template #actions>
+          <Button
+            class="w-full"
+            color="primary"
+            type="submit"
+          >
+            Save changes
+          </Button>
+        </template>
+      </ModalFooter>
+    </template>
+  </Modal>
 </template>
 
