@@ -1,6 +1,6 @@
 {
   "name": "kanbanboardoffline",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "dist/electron/main/index.js",
   "description": "Simple Offline Kanban Board",
   "author": "Matt Fletcher",
@@ -54,7 +54,7 @@
     "vue-router": "^4.1.6",
     "vue-smooth-reflow": "^0.1.12",
     "vue-toastification": "^2.0.0-rc.5",
-    "vue-tsc": "^1.0.3",
+    "vue-tsc": "^1.8.27",
     "yup": "^0.32.11",
     "zod": "^3.19.0"
   },
