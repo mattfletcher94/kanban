@@ -1,20 +1,11 @@
 <script lang="ts" setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as zod from 'zod'
+import { Trash, X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import type { BoardCreate, Theme } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import IconBin from '../Icons/IconBin.vue'
-import IconClose from '../Icons/IconClose.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
-import FormControlText from '@/lucidui/form/FormControlText.vue'
-import FormControlSelect from '@/lucidui/form/FormControlSelect.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
+import { Button, FormGroup, FormControlText, FormControlSelect, Modal, ModalHeader, ModalFooter } from '@/lucidui'
+import { useCreateBoardForm } from '@/composables/useCreateBoardForm'
 
 const props = defineProps<{
   open: boolean
@@ -27,19 +18,12 @@ const emits = defineEmits<{
 
 const boardsStore = useBoardsStore()
 
-const form = useForm<BoardCreate>({
+const form = useCreateBoardForm({
   initialValues: {
     title: '',
     themeId: boardsStore.themes[0].id,
   },
-  validationSchema: toTypedSchema(zod.object({
-    title: zod.string().min(1, 'Title is required'),
-    themeId: zod.string().min(1, 'Theme is required'),
-  })),
 })
-
-const title = form.useFieldModel('title')
-const themeId = form.useFieldModel('themeId')
 
 const isCreateThemeDialogOpen = ref(false)
 
@@ -49,7 +33,7 @@ const onSubmit = form.handleSubmit((values, actions) => {
 
 const onCreateTheme = (theme: Theme) => {
   isCreateThemeDialogOpen.value = false
-  themeId.value = theme.id
+  form.values.themeId.value = theme.id
 }
 
 const onClose = () => {
@@ -58,8 +42,8 @@ const onClose = () => {
 
 const handleDeleteTheme = (id: string) => {
   // If theme is selected theme, reset themeId
-  if (id === themeId.value)
-    themeId.value = boardsStore.themes[0].id
+  if (id === form.values.themeId.value)
+    form.values.themeId.value = boardsStore.themes[0].id
 
   // Delete theme image
   const image = boardsStore.getThemeById(id)?.image
@@ -94,7 +78,7 @@ watch(() => props.open, () => {
             type="button"
             @click="onClose"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -108,14 +92,14 @@ watch(() => props.open, () => {
           <template #control="{ id }">
             <FormControlText
               :id="id"
-              :value="title"
+              :value="form.values.title.value"
               type="text"
               placeholder="Enter title..."
-              @input="(value) => title = value"
+              @input="(value) => form.values.title.value = value"
             />
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
-            {{ form.errors.value.title }}
+          <template v-if="form.errorBag.value.title?.[0]" #error>
+            {{ form.errorBag.value.title?.[0] }}
           </template>
         </FormGroup>
         <FormGroup class="mt-6">
@@ -127,8 +111,8 @@ watch(() => props.open, () => {
               <FormControlSelect
                 :id="id"
                 :options="boardsStore.themes"
-                :value="themeId"
-                @change="(value) => themeId = value.id"
+                :value="form.values.themeId.value"
+                @change="(value) => form.values.themeId.value = value.id"
               >
                 <template #label="{ selected }">
                   <div class="flex items-center gap-2 truncate">
@@ -153,7 +137,7 @@ watch(() => props.open, () => {
                     title="Delete theme (no undo)"
                     @click.stop="handleDeleteTheme(option.id)"
                   >
-                    <IconBin class="w-4 h-4" />
+                    <Trash class="w-4 h-4" />
                   </Button>
                 </template>
               </FormControlSelect>
@@ -167,10 +151,7 @@ watch(() => props.open, () => {
               </Button>
             </div>
           </template>
-          <template
-            v-if="form.submitCount.value > 0 && form.errors.value.themeId"
-            #error
-          >
+          <template v-if="form.errorBag.value.themeId?.[0]" #error>
             {{ form.errors.value.themeId }}
           </template>
         </FormGroup>

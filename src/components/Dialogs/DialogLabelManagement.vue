@@ -1,18 +1,11 @@
 <script lang="ts" setup>
+import { X, Trash } from 'lucide-vue-next'
 import { computed, nextTick, ref } from 'vue'
-import type { Label, LabelCreate, LabelUpdate } from '../../stores/boards'
+import type { Label, LabelUpdate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import IconBin from '../Icons/IconBin.vue'
-import IconClose from '../Icons/IconClose.vue'
-import Checkbox from '../Inputs/Checkbox.vue'
 import SmoothReflow from '../SmoothReflow.vue'
 import { colors, resolveUserFriendlyColorName } from '../../data/colors'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormControlText from '@/lucidui/form/FormControlText.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Popover from '@/lucidui/popovers/Popover.vue'
+import { Button, FormControlCheckbox, FormControlText, Modal, ModalHeader, ModalFooter, Popover } from '@/lucidui'
 
 const props = defineProps<{
   open: boolean
@@ -98,7 +91,7 @@ const onClose = () => {
             type="button"
             @click="onClose"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -114,7 +107,7 @@ const onClose = () => {
             >
               <div class="w-full flex items-center gap-2 border border-gray-300 p-2 rounded-lg">
                 <div class="shrink-0">
-                  <Checkbox
+                  <FormControlCheckbox
                     size="sm"
                     :checked="props.selectedLabels.includes(label.id)"
                     @change="(value) => handleSelectLabelChange(value, label.id)"
@@ -185,7 +178,7 @@ const onClose = () => {
                     size="sm"
                     @click="handleDeleteLabel(label.id)"
                   >
-                    <IconBin class="w-4 h-4" />
+                    <Trash class="w-4 h-4" />
                   </Button>
                 </div>
               </div>

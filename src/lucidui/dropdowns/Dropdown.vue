@@ -227,7 +227,7 @@ defineExpose({
   </div>
 </template>
 
-<style lang="scss">
+<style>
 .dropdown__popper-enter-active .dropdown__popper__card {
     transition: all 240ms;
 }

@@ -1,16 +1,9 @@
 <script lang="ts" setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as zod from 'zod'
+import { X } from 'lucide-vue-next'
 import { unref, watch } from 'vue'
 import type { Column, ColumnUpdate } from '../../stores/boards'
-import IconClose from '../Icons/IconClose.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
-import FormControlText from '@/lucidui/form/FormControlText.vue'
+import { Button, FormGroup, FormControlText, Modal, ModalHeader, ModalFooter } from '@/lucidui'
+import { useEditColumnForm } from '@/composables/useEditColumnForm'
 
 const props = defineProps<{
   column: Column | null
@@ -22,20 +15,13 @@ const emits = defineEmits<{
   (event: 'save', column: ColumnUpdate): void
 }>()
 
-const form = useForm<ColumnUpdate>({
+const form = useEditColumnForm({
   initialValues: {
     id: unref(props.column?.id || ''),
     boardId: unref(props.column?.boardId || ''),
     title: unref(props.column?.title),
   },
-  validationSchema: toTypedSchema(zod.object({
-    id: zod.string().min(1, 'Id is required'),
-    boardId: zod.string().min(1, 'Board is required'),
-    title: zod.string().min(1, 'Name is required'),
-  })),
 })
-
-const title = form.useFieldModel('title')
 
 const onSubmit = form.handleSubmit((values, actions) => {
   emits('save', values)
@@ -47,10 +33,12 @@ const onClose = () => {
 
 watch(() => props.open, () => {
   if (props.open) {
-    form.setValues({
-      id: unref(props.column?.id || ''),
-      boardId: unref(props.column?.boardId || ''),
-      title: unref(props.column?.title),
+    form.resetForm({
+      values: {
+        id: unref(props.column?.id || ''),
+        boardId: unref(props.column?.boardId || ''),
+        title: unref(props.column?.title),
+      }
     })
   }
 })
@@ -76,7 +64,7 @@ watch(() => props.open, () => {
             type="button"
             @click="onClose"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -90,14 +78,14 @@ watch(() => props.open, () => {
           <template #control="{ id }">
             <FormControlText
               :id="id"
-              :value="title"
+              :value="form.values.title.value"
               type="text"
               placeholder="Enter card title..."
-              @input="(value) => title = value"
+              @input="(value) => form.values.title.value = value"
             />
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
-            {{ form.errors.value.title }}
+          <template v-if="form.errorBag.value.title?.[0]" #error>
+            {{ form.errorBag.value.title?.[0] }}
           </template>
         </FormGroup>
       </div>

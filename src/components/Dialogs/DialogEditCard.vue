@@ -1,28 +1,14 @@
 <script lang="ts" setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as zod from 'zod'
+import { X, Trash, MoreVertical, Plus, ExternalLink } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref, unref, watch } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import type { Card, CardUpdate } from '../../stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import IconAdd from '../Icons/IconAdd.vue'
 import CardLabel from '../CardLabel.vue'
-import IconBin from '../Icons/IconBin.vue'
-import IconOpen from '../Icons/IconOpen.vue'
-import IconClose from '../Icons/IconClose.vue'
-import IconEllipsis from '../Icons/IconEllipsis.vue'
 import DialogLabelManagement from './DialogLabelManagement.vue'
 import DialogConfirm from './DialogConfirm.vue'
-import Checkbox from './../Inputs/Checkbox.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
-import FormControlTextarea from '@/lucidui/form/FormControlTextarea.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
-import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
+import { Button, FormGroup, FormControlCheckbox, FormControlTextarea, Modal, ModalHeader, ModalFooter, Dropdown, DropdownOption } from '@/lucidui'
+import { useEditCardForm } from '@/composables/useEditCardForm'
 
 const props = defineProps<{
   card: Card | null
@@ -42,7 +28,7 @@ const todosList = ref<any>()
 const dialogLabelManagementOpen = ref(false)
 const dialogConfirmDeleteOpen = ref(false)
 
-const form = useForm<CardUpdate>({
+const form = useEditCardForm({
   initialValues: {
     id: unref(props.card?.id || ''),
     columnId: unref(props.card?.columnId || ''),
@@ -52,30 +38,7 @@ const form = useForm<CardUpdate>({
     links: unref(props.card?.links || []),
     todos: unref(props.card?.todos || []),
   },
-  validationSchema: toTypedSchema(zod.object({
-    id: zod.string().min(1, 'ID is required'),
-    columnId: zod.string().min(1, 'Column is required'),
-    title: zod.string().min(1, 'Title is required'),
-    description: zod.string().optional().default(''),
-    labelIds: zod.array(zod.string()).optional().default([]),
-    links: zod.array(zod.object({
-      id: zod.string().min(1, 'ID is required'),
-      name: zod.string().optional().default(''),
-      url: zod.string().optional().default(''),
-    })).optional().default([]),
-    todos: zod.array(zod.object({
-      id: zod.string().min(1, 'ID is required'),
-      description: zod.string().optional().default(''),
-      completed: zod.boolean().optional().default(false),
-    })).optional().default([]),
-  })),
 })
-
-const title = form.useFieldModel('title')
-const description = form.useFieldModel('description')
-const labelIds = form.useFieldModel('labelIds')
-const links = form.useFieldModel('links')
-const todos = form.useFieldModel('todos')
 
 const onSubmit = form.handleSubmit((values, actions) => {
   // Remove empty links
@@ -105,26 +68,26 @@ const onDeleteCard = () => {
 }
 
 const handleSelectLabel = (id: string) => {
-  if (!labelIds.value)
-    labelIds.value = []
+  if (!form.values.labelIds.value)
+    form.values.labelIds.value = []
 
-  if (!labelIds.value.includes(id))
-    labelIds.value.push(id)
+  if (!form.values.labelIds.value.includes(id))
+    form.values.labelIds.value.push(id)
 }
 
 const handleUnselectLabel = (id: string) => {
-  if (!labelIds.value)
-    labelIds.value = []
+  if (!form.values.labelIds.value)
+    form.values.labelIds.value = []
 
-  if (labelIds.value.includes(id))
-    labelIds.value = labelIds.value.filter(x => x !== id)
+  if (form.values.labelIds.value.includes(id))
+    form.values.labelIds.value = form.values.labelIds.value.filter(x => x !== id)
 }
 
 const handleClickAddLinkBtn = async () => {
-  if (!links.value)
-    links.value = []
+  if (!form.values.links.value)
+    form.values.links.value = []
 
-  links.value.push({
+  form.values.links.value.push({
     id: uuidv4(),
     name: '',
     url: '',
@@ -141,17 +104,17 @@ const handleClickAddLinkBtn = async () => {
 }
 
 const handleDeleteLink = (id: string) => {
-  if (!links.value)
-    links.value = []
+  if (!form.values.links.value)
+  form.values.links.value = []
 
-  links.value = links.value.filter(x => x.id !== id)
+  form.values.links.value = form.values.links.value.filter(x => x.id !== id)
 }
 
 const handleClickAddTodoBtn = async () => {
-  if (!todos.value)
-    todos.value = []
+  if (!form.values.todos.value)
+  form.values.todos.value = []
 
-  todos.value.push({
+  form.values.todos.value.push({
     id: uuidv4(),
     description: '',
     completed: false,
@@ -168,35 +131,37 @@ const handleClickAddTodoBtn = async () => {
 }
 
 const handleDeleteTodo = (id: string) => {
-  if (!todos.value)
-    todos.value = []
+  if (!form.values.todos.value)
+    form.values.todos.value = []
 
-  todos.value = todos.value.filter(x => x.id !== id)
+  form.values.todos.value = form.values.todos.value.filter(x => x.id !== id)
 }
 
 const handleToggleTodoCompleted = (id: string) => {
-  if (!todos.value)
-    todos.value = []
+  if (!form.values.todos.value)
+    form.values.todos.value = []
 
-  const todo = todos.value.find(x => x.id === id)
+  const todo = form.values.todos.value.find(x => x.id === id)
   if (todo)
     todo.completed = !todo.completed
 }
 
 const selectedLabels = computed(() => {
-  return boardsStore.labels.filter(label => labelIds.value?.includes(label.id))
+  return boardsStore.labels.filter(label => form.values.labelIds.value?.includes(label.id))
 })
 
 watch(() => props.open, () => {
   if (props.open) {
-    form.setValues({
-      id: unref(props.card?.id || ''),
-      columnId: unref(props.card?.columnId || ''),
-      title: unref(props.card?.title),
-      description: unref(props.card?.description),
-      labelIds: unref(props.card?.labelIds || []),
-      links: unref(props.card?.links || []),
-      todos: unref(props.card?.todos || []),
+    form.resetForm({
+      values: {
+        id: unref(props.card?.id || ''),
+        columnId: unref(props.card?.columnId || ''),
+        title: unref(props.card?.title),
+        description: unref(props.card?.description),
+        labelIds: unref(props.card?.labelIds || []),
+        links: unref(props.card?.links || []),
+        todos: unref(props.card?.todos || []),
+      },
     })
   }
 })
@@ -219,10 +184,10 @@ watch(() => props.open, () => {
                 :id="id"
                 class="text-lg font-bold"
                 :inline="true"
-                :value="title"
+                :value="form.values.title.value"
                 :spellcheck="false"
                 placeholder="No title"
-                @change="(value) => title = value"
+                @change="(value) => form.values.title.value = value"
               />
             </template>
           </FormGroup>
@@ -238,7 +203,7 @@ watch(() => props.open, () => {
                 title="Close"
                 @click="toggle"
               >
-                <IconEllipsis class="h-5 w-5" />
+                <MoreVertical class="h-5 w-5" />
               </Button>
             </template>
             <template #options>
@@ -256,7 +221,7 @@ watch(() => props.open, () => {
             type="button"
             @click="onClose"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -286,31 +251,9 @@ watch(() => props.open, () => {
                 class="justify-start"
                 @click="() => dialogLabelManagementOpen = true"
               >
-                <IconAdd class="w-4 h-4" />
+                <Plus class="w-4 h-4" />
                 Add Label
               </Button>
-              <!--
-              <PopoverLabels
-                :selected-labels="labelIds || []"
-                @select="(labelId) => handleSelectLabel(labelId)"
-                @unselect="(labelId) => handleUnselectLabel(labelId)"
-                @create="(label) => handleSelectLabel(label.id)"
-              >
-                <template #trigger="{ toggle }">
-                  <Button
-                    key="button"
-                    color="secondary"
-                    size="sm"
-                    class="justify-start"
-                    @click="toggle"
-                  >
-                    <IconAdd class="w-4 h-4" />
-                    Add Label
-                  </Button>
-                </template>
-              </PopoverLabels>
-              -->
-
             </div>
           </template>
         </FormGroup>
@@ -323,12 +266,12 @@ watch(() => props.open, () => {
           <template #control="{ id }">
             <FormControlTextarea
               :id="id"
-              :value="description"
+              :value="form.values.description.value"
               :inline="true"
               :spellcheck="false"
               class="text-sm -ml-1"
               placeholder="No description"
-              @change="(value) => description = value"
+              @change="(value) => form.values.description.value = value"
             />
           </template>
         </FormGroup>
@@ -339,7 +282,7 @@ watch(() => props.open, () => {
             <div class="flex justify-between items-center">
               To-do's
               <Button
-                v-if="todos && todos.length"
+                v-if="form.values.todos.value && form.values.todos.value.length"
                 key="button"
                 color="secondary"
                 size="sm"
@@ -347,23 +290,23 @@ watch(() => props.open, () => {
                 @click="handleClickAddTodoBtn"
               >
                 Add Todo
-                <IconAdd class="w-4 h-4" />
+                <Plus class="w-4 h-4" />
               </Button>
             </div>
           </template>
           <template #control>
             <ul
-              v-if="todos && todos.length"
+            v-if="form.values.todos.value && form.values.todos.value.length"
               ref="todosList"
               class="flex flex-col mt-1 divide-y divide-slate-200 w-full rounded-lg border border-slate-200 overflow-hidden"
             >
               <li
-                v-for="(todo) in todos"
+                v-for="(todo) in form.values.todos.value"
                 :key="todo.id"
                 class="flex items-center gap-2 bg-white p-2"
               >
                 <div class="shrink-0">
-                  <Checkbox
+                  <FormControlCheckbox
                     size="sm"
                     :checked="todo.completed"
                     @change="() => handleToggleTodoCompleted(todo.id)"
@@ -388,7 +331,7 @@ watch(() => props.open, () => {
                     size="sm"
                     @click="handleDeleteTodo(todo.id)"
                   >
-                    <IconBin class="w-4 h-4" />
+                    <Trash class="w-4 h-4" />
                   </Button>
                 </div>
               </li>
@@ -400,7 +343,7 @@ watch(() => props.open, () => {
                 size="sm"
                 @click="handleClickAddTodoBtn"
               >
-                <IconAdd class="w-4 h-4" />
+                <Plus class="w-4 h-4" />
                 Add Todo
               </Button>
             </div>
@@ -413,7 +356,7 @@ watch(() => props.open, () => {
             <div class="flex justify-between items-center">
               Links
               <Button
-                v-if="links && links.length"
+                v-if="form.values.links.value && form.values.links.value.length"
                 key="button"
                 color="secondary"
                 size="sm"
@@ -421,18 +364,18 @@ watch(() => props.open, () => {
                 @click="handleClickAddLinkBtn"
               >
                 Add Link
-                <IconAdd class="w-4 h-4" />
+                <Plus class="w-4 h-4" />
               </Button>
             </div>
           </template>
           <template #control>
             <ul
-              v-if="links && links.length"
+            v-if="form.values.links.value && form.values.links.value.length"
               ref="linksList"
               class="flex flex-col mt-1 divide-y divide-slate-200 w-full rounded-lg border border-slate-200 overflow-hidden"
             >
               <li
-                v-for="(link) in links"
+                v-for="(link) in form.values.links.value"
                 :key="link.id"
                 class="flex items-center gap-2 bg-white p-2"
               >
@@ -465,7 +408,7 @@ watch(() => props.open, () => {
                     :href="link.url"
                     target="_blank"
                   >
-                    <IconOpen class="w-4 h-4" />
+                    <ExternalLink class="w-4 h-4" />
                   </Button>
                 </div>
                 <div class="shrink-0">
@@ -477,7 +420,7 @@ watch(() => props.open, () => {
                     size="sm"
                     @click="handleDeleteLink(link.id)"
                   >
-                    <IconBin class="w-4 h-4" />
+                    <Trash class="w-4 h-4" />
                   </Button>
                 </div>
               </li>
@@ -489,7 +432,7 @@ watch(() => props.open, () => {
                 size="sm"
                 @click="handleClickAddLinkBtn"
               >
-                <IconAdd class="w-4 h-4" />
+                <Plus class="w-4 h-4" />
                 Add Link
               </Button>
             </div>
@@ -514,7 +457,7 @@ watch(() => props.open, () => {
   </Modal>
   <DialogLabelManagement
     :open="dialogLabelManagementOpen"
-    :selected-labels="labelIds || []"
+    :selected-labels="form.values.labelIds.value || []"
     @select="(labelId) => handleSelectLabel(labelId)"
     @unselect="(labelId) => handleUnselectLabel(labelId)"
     @create="(label) => handleSelectLabel(label.id)"
@@ -532,7 +475,6 @@ watch(() => props.open, () => {
 <style scoped>
 .textarea--in-place {
   @apply w-full border-transparent bg-transparent resize-none ring-2 ring-transparent leading-normal rounded-md overflow-hidden;
-
   @apply !p-1;
   @apply hover:bg-gray-50 focus:bg-gray-50 focus:ring-2 focus:ring-primary-500;
 }

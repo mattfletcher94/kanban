@@ -1,34 +1,22 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, unref, watch } from 'vue'
 import Sortable from 'sortablejs'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ChevronDown, Plus, Settings2, GripVertical, Trash, ExternalLink, Download, Upload, Pencil } from 'lucide-vue-next'
+import { Button, Dropdown, DropdownOption, FormControlCheckbox } from '@/lucidui'
+import { useBoardsStore } from '@/stores/boards'
+import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from '@/stores/boards'
 import { POSITION, useToast } from 'vue-toastification'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCardMinimal from '../components/Dialogs/DialogCreateCardMinimal.vue'
 import DialogEditCard from '../components/Dialogs/DialogEditCard.vue'
 import DialogEditBoard from '../components/Dialogs/DialogEditBoard.vue'
-import DialogViewSettings from '../components/Dialogs/DialogViewSettings.vue'
 import CardLabel from '../components/CardLabel.vue'
-import IconChevonDown from '../components/Icons/IconChevonDown.vue'
-import IconAdd from '../components/Icons/IconAdd.vue'
-import IconConfig from '../components/Icons/IconConfig.vue'
-import IconHandle from '../components/Icons/IconHandle.vue'
-import IconBin from '../components/Icons/IconBin.vue'
-import IconOpen from '../components/Icons/IconOpen.vue'
-import IconExport from '../components/Icons/IconExport.vue'
-import IconImport from '../components/Icons/IconImport.vue'
 import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
-import IconPencil from '../components/Icons/IconPencil.vue'
-import Checkbox from '../components/Inputs/Checkbox.vue'
-import { useBoardsStore } from './../stores/boards'
-import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from './../stores/boards'
 import DialogConfirm from '@/components/Dialogs/DialogConfirm.vue'
 import DialogExportBoard from '@/components/Dialogs/DialogExportBoard.vue'
 import DialogImportBoard from '@/components/Dialogs/DialogImportBoard.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
-import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -44,7 +32,6 @@ const cardRefs = ref<HTMLElement[]>([])
 const isCreateDialogOpen = ref(false)
 const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
-const isViewSettingsDialogOpen = ref(false)
 const isExportDialogOpen = ref(false)
 const isImportDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
@@ -64,7 +51,6 @@ const handleCreateBoard = (board: BoardCreate) => {
 
 const handleUpdateBoard = (updatedValues: BoardUpdate) => {
   isEditBoardDialogOpen.value = false
-  isViewSettingsDialogOpen.value = false
   if (!board.value)
     return
   boardsStore.updateBoard(updatedValues)
@@ -226,6 +212,7 @@ const initSortableColumns = () => {
       columns.forEach((col) => {
         boardsStore.updateColumn({
           id: col.id,
+          title: col.title,
           boardId: col.boardId,
           order: orders.indexOf(col.id),
         })
@@ -320,14 +307,14 @@ watch(() => columns.value.length, () => {
                 <div class="w-full text-left truncate">
                   {{ board.title }}
                 </div>
-                <IconChevonDown class="w-4 h-4 ml-auto" />
+                <ChevronDown class="w-4 h-4 ml-auto" />
               </Button>
             </template>
             <template #options>
               <DropdownOption @click="isCreateDialogOpen = true">
                 <template #start>
                   <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-500 text-white">
-                    <IconAdd class="w-4 h-4" />
+                    <Plus class="w-4 h-4" />
                   </div>
                 </template>
                 <template #label>
@@ -359,28 +346,28 @@ watch(() => columns.value.length, () => {
               @click="isCreateColumnDialogOpen = true"
             >
               Add Column
-              <IconAdd class="w-4 h-4" />
+              <Plus class="w-4 h-4" />
             </Button>
             <Button
               color="secondary"
               @click="isEditBoardDialogOpen = true"
             >
               Board Settings
-              <IconConfig class="w-4 h-4" />
+              <Settings2 class="w-4 h-4" />
             </Button>
             <Button
               color="secondary"
               @click="isExportDialogOpen = true"
             >
               Export
-              <IconExport class="w-4 h-4" />
+              <Download class="w-4 h-4" />
             </Button>
             <Button
               color="secondary"
               @click="isImportDialogOpen = true"
             >
               Import
-              <IconImport class="w-4 h-4" />
+              <Upload class="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -415,7 +402,7 @@ watch(() => columns.value.length, () => {
                 <!-- Column title -->
                 <div class="flex w-full items-center justify-between font-bold gap-2 px-4 py-2.5 border-b border-b-slate-200 text-slate-800">
                   <div class="board__columns__column__handle cursor-grab">
-                    <IconHandle class="w-4 h-4" />
+                    <GripVertical class="w-4 h-4" />
                   </div>
                   <div class="ml-2">
                     <Transition mode="out-in" name="slide-fade">
@@ -436,7 +423,7 @@ watch(() => columns.value.length, () => {
                       title="Add Card"
                       @click="createCardColumnCandidate = column.id"
                     >
-                      <IconAdd class="w-4 h-4" />
+                      <Plus class="w-4 h-4" />
                     </Button>
                   </div>
                   <div>
@@ -450,13 +437,13 @@ watch(() => columns.value.length, () => {
                           title="Edit or delete column"
                           @click="toggle"
                         >
-                          <IconChevonDown class="w-4 h-4" />
+                          <ChevronDown class="w-4 h-4" />
                         </Button>
                       </template>
                       <template #options>
                         <DropdownOption @click="editColumnCandidate = column">
                           <template #start>
-                            <IconPencil class="block w-4 h-4" />
+                            <Pencil class="block w-4 h-4" />
                           </template>
                           <template #label>
                             Edit Column
@@ -464,7 +451,7 @@ watch(() => columns.value.length, () => {
                         </DropdownOption>
                         <DropdownOption @click="deleteColumnCandidate = column">
                           <template #start>
-                            <IconBin class="block w-4 h-4" />
+                            <Trash class="block w-4 h-4" />
                           </template>
                           <template #label>
                             Delete Column
@@ -550,7 +537,7 @@ watch(() => columns.value.length, () => {
                             @click="(e) => e.stopPropagation()"
                           >
                             <div class="w-full">
-                              <Checkbox
+                              <FormControlCheckbox
                                 class="p-2 w-full hover:bg-primary-50 transition-colors"
                                 size="sm"
                                 :checked="todo.completed"
@@ -559,7 +546,7 @@ watch(() => columns.value.length, () => {
                                 <span :class="{ 'line-through': todo.completed }">
                                   {{ todo.description }}
                                 </span>
-                              </Checkbox>
+                              </FormControlCheckbox>
                             </div>
                           </li>
                         </ul>
@@ -578,7 +565,7 @@ watch(() => columns.value.length, () => {
                             :href="link.url"
                             target="_blank"
                           >
-                            <IconOpen class="w-4 h-4" />
+                            <ExternalLink class="w-4 h-4" />
                             {{ link.name }}
                           </Button>
                         </div>
@@ -593,7 +580,7 @@ watch(() => columns.value.length, () => {
                       @click="createCardColumnCandidate = column.id"
                     >
                       Add Card
-                      <IconAdd class="w-4 h-4" />
+                      <Plus class="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -634,14 +621,6 @@ watch(() => columns.value.length, () => {
         @save="(board) => handleUpdateBoard(board)"
         @delete="() => handleDeleteBoard()"
         @close="() => isEditBoardDialogOpen = false"
-      />
-
-      <!-- View settings dialog -->
-      <DialogViewSettings
-        :board="board"
-        :open="isViewSettingsDialogOpen"
-        @save="(board) => handleUpdateBoard(board)"
-        @close="() => isViewSettingsDialogOpen = false"
       />
 
       <!-- Create column dialog -->

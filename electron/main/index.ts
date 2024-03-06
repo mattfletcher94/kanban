@@ -84,6 +84,7 @@ async function createWindow() {
   })
 
   // Open target="_blank" links in the default browser
+  // @ts-ignore
   win.webContents.on('new-window', (e, url) => {
     e.preventDefault()
     shell.openExternal(url)

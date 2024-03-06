@@ -28,7 +28,7 @@ const computedChecked = computed({
   <Switch
     v-model="computedChecked"
     :disabled="props.disabled"
-    class="form-checkboxx flex items-center text-left justify-start gap-2 h-auto w-auto !ring-0 !outline-none !shadow-none !border-none"
+    class="form-checkbox flex items-center text-left justify-start gap-2 h-auto w-auto !ring-0 !outline-none !shadow-none !border-none"
   >
     <div
       :class="{
@@ -60,7 +60,7 @@ const computedChecked = computed({
 </template>
 
 <style scoped>
-.form-checkboxx:focus-visible .form-checkboxx__toggle {
+.form-checkbox:focus-visible .form-checkboxx__toggle {
  @apply ring-offset-2 outline-none ring-2 ring-primary-500 ring-opacity-75;
 }
 </style>

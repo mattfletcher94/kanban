@@ -1,25 +1,12 @@
 <script lang="ts" setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as zod from 'zod'
+import { X, Trash, MoreVertical } from 'lucide-vue-next'
 import { ref, unref, watch } from 'vue'
-import type { Board, BoardUpdate, Theme } from '../../stores/boards'
+import type { Board, BoardUpdate, Theme } from '@/stores/boards'
 import { useBoardsStore } from '../../stores/boards'
-import IconBin from '../Icons/IconBin.vue'
-import IconEllipsis from '../Icons/IconEllipsis.vue'
-import IconClose from '../Icons/IconClose.vue'
-import Switch from '../Inputs/Switch.vue'
 import DialogCreateTheme from './DialogCreateTheme.vue'
 import DialogConfirm from './DialogConfirm.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
-import FormControlText from '@/lucidui/form/FormControlText.vue'
-import FormControlSelect from '@/lucidui/form/FormControlSelect.vue'
-import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
-import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
+import { Button, FormGroup, FormControlSwitch, FormControlText, FormControlSelect, Modal, ModalHeader, ModalFooter, Dropdown, DropdownOption } from '@/lucidui'
+import { useEditBoardForm } from '@/composables/useEditBoardForm'
 
 const props = defineProps<{
   open: boolean
@@ -35,39 +22,19 @@ const emit = defineEmits<{
 
 const boardsStore = useBoardsStore()
 
-const form = useForm<BoardUpdate>({
+const form = useEditBoardForm({
   initialValues: {
     id: unref(props.board.id),
     title: unref(props.board.title),
     themeId: unref(props.board.themeId),
-    viewSettings: unref(props.board.viewSettings || {
-      hideLabels: false,
-      hideDescription: false,
-      hideLinks: false,
-      hideTodos: false,
-    }),
+    viewSettings: {
+      hideLabels: props.board.viewSettings?.hideLabels || false,
+      hideDescription: props.board.viewSettings?.hideDescription || false,
+      hideLinks: props.board.viewSettings?.hideLinks || false,
+      hideTodos: props.board.viewSettings?.hideTodos || false,
+    },
   },
-  validationSchema: toTypedSchema(zod.object({
-    id: zod.string().min(1, 'Id is required'),
-    title: zod.string().min(1, 'Title is required'),
-    themeId: zod.string().min(1, 'Theme is required'),
-    viewSettings: zod.object({
-      hideLabels: zod.boolean().default(false),
-      hideDescription: zod.boolean().default(false),
-      hideLinks: zod.boolean().default(false),
-      hideTodos: zod.boolean().default(false),
-    }).optional().default({
-      hideLabels: false,
-      hideDescription: false,
-      hideLinks: false,
-      hideTodos: false,
-    }),
-  })),
 })
-
-const title = form.useFieldModel('title')
-const themeId = form.useFieldModel('themeId')
-const viewSettings = form.useFieldModel('viewSettings')
 
 const isCreateThemeDialogOpen = ref(false)
 const isDeleteBoardDialogOpen = ref(false)
@@ -80,27 +47,26 @@ const onUpdateViewSettings = (
   key: 'hideLabels' | 'hideDescription' | 'hideLinks' | 'hideTodos',
   value: boolean,
 ) => {
-  if (!viewSettings.value) {
-    viewSettings.value = {
+  if (!form.values.viewSettings.value) {
+    form.values.viewSettings.value = {
       hideLabels: false,
       hideDescription: false,
       hideLinks: false,
       hideTodos: false,
     }
   }
-
-  viewSettings.value[key] = value
+  form.values.viewSettings.value[key] = value
 }
 
 const onCreateTheme = (theme: Theme) => {
   isCreateThemeDialogOpen.value = false
-  themeId.value = theme.id
+  form.values.themeId.value = theme.id
 }
 
 const handleDeleteTheme = (id: string) => {
   // If theme is selected theme, reset themeId
-  if (id === themeId.value)
-    themeId.value = boardsStore.themes[0].id
+  if (id === form.values.themeId.value)
+    form.values.themeId.value = boardsStore.themes[0].id
 
   // Delete theme image
   const image = boardsStore.getThemeById(id)?.image
@@ -112,11 +78,18 @@ const handleDeleteTheme = (id: string) => {
 
 watch(() => props.open, () => {
   if (props.open) {
-    form.setValues({
-      id: unref(props.board.id),
-      title: unref(props.board.title),
-      themeId: unref(props.board.themeId),
-      viewSettings: unref(props.board.viewSettings),
+    form.resetForm({
+      values: {
+        id: unref(props.board.id),
+        title: unref(props.board.title),
+        themeId: unref(props.board.themeId),
+        viewSettings: {
+          hideLabels: props.board.viewSettings?.hideLabels || false,
+          hideDescription: props.board.viewSettings?.hideDescription || false,
+          hideLinks: props.board.viewSettings?.hideLinks || false,
+          hideTodos: props.board.viewSettings?.hideTodos || false,
+        },
+      },
     })
   }
 })
@@ -145,7 +118,7 @@ watch(() => props.open, () => {
                 title="Close"
                 @click="toggle"
               >
-                <IconEllipsis class="h-5 w-5" />
+                <MoreVertical class="h-5 w-5" />
               </Button>
             </template>
             <template #options>
@@ -163,7 +136,7 @@ watch(() => props.open, () => {
             type="button"
             @click="emit('close')"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -177,14 +150,14 @@ watch(() => props.open, () => {
           <template #control="{ id }">
             <FormControlText
               :id="id"
-              :value="title"
+              :value="form.values.title.value"
               type="text"
               placeholder="Enter title..."
-              @input="(value) => title = value"
+              @input="(value) => form.values.title.value = value"
             />
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
-            {{ form.errors.value.title }}
+          <template v-if="form.errorBag.value.title?.[0]" #error>
+            {{ form.errorBag.value.title?.[0] }}
           </template>
         </FormGroup>
         <FormGroup class="mt-6">
@@ -196,8 +169,8 @@ watch(() => props.open, () => {
               <FormControlSelect
                 :id="id"
                 :options="boardsStore.themes"
-                :value="themeId || ''"
-                @change="(value) => themeId = value.id"
+                :value="form.values.themeId.value || ''"
+                @change="(value) => form.values.themeId.value = value.id"
               >
                 <template #label="{ selected }">
                   <div class="flex items-center gap-2 truncate">
@@ -222,7 +195,7 @@ watch(() => props.open, () => {
                     title="Delete theme (no undo)"
                     @click.stop="handleDeleteTheme(option.id)"
                   >
-                    <IconBin class="w-4 h-4" />
+                    <Trash class="w-4 h-4" />
                   </Button>
                 </template>
               </FormControlSelect>
@@ -236,8 +209,8 @@ watch(() => props.open, () => {
               </Button>
             </div>
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.themeId" #error>
-            {{ form.errors.value.themeId }}
+          <template v-if="form.errorBag.value.themeId?.[0]" #error>
+            {{ form.errorBag.value.themeId?.[0] }}
           </template>
         </FormGroup>
         <FormGroup class="mt-6">
@@ -246,30 +219,30 @@ watch(() => props.open, () => {
           </template>
           <template #control>
             <div class="flex flex-col gap-2 items-start mt-2">
-              <Switch
-                :checked="!(viewSettings?.hideLabels || false)"
-                @change="(value) => onUpdateViewSettings('hideLabels', !value)"
+              <FormControlSwitch
+                :checked="!(form.values.viewSettings.value?.hideLabels || false)"
+                @change="(value: boolean) => onUpdateViewSettings('hideLabels', !value)"
               >
                 Show card labels
-              </Switch>
-              <Switch
-                :checked="!(viewSettings?.hideDescription || false)"
-                @change="(value) => onUpdateViewSettings('hideDescription', !value)"
+              </FormControlSwitch>
+              <FormControlSwitch
+                :checked="!(form.values.viewSettings.value?.hideDescription || false)"
+                @change="(value: boolean) => onUpdateViewSettings('hideDescription', !value)"
               >
                 Show card description
-              </Switch>
-              <Switch
-                :checked="!(viewSettings?.hideLinks || false)"
+              </FormControlSwitch>
+              <FormControlSwitch
+                :checked="!(form.values.viewSettings.value?.hideLinks || false)"
                 @change="(value: boolean) => onUpdateViewSettings('hideLinks', !value)"
               >
                 Show card links
-              </Switch>
-              <Switch
-                :checked="!(viewSettings?.hideTodos || false)"
-                @change="(value) => onUpdateViewSettings('hideTodos', !value)"
+              </FormControlSwitch>
+              <FormControlSwitch
+                :checked="!(form.values.viewSettings.value?.hideTodos || false)"
+                @change="(value: boolean) => onUpdateViewSettings('hideTodos', !value)"
               >
                 Show card todos
-              </Switch>
+              </FormControlSwitch>
             </div>
           </template>
         </FormGroup>

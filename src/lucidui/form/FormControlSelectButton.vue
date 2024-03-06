@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import { ChevronDown } from 'lucide-vue-next'
 import { twMerge } from 'tailwind-merge'
 import { computed } from 'vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import IconChevonDown from '@/components/Icons/IconChevonDown.vue'
+import { Button } from '@/lucidui'
 
 const props = withDefaults(defineProps<{
   class?: string
@@ -42,7 +42,7 @@ function handleInput(emit: 'click' | 'blur' | 'focus', e: Event) {
     @focus="handleInput('focus', $event)"
   >
     <slot />
-    <IconChevonDown
+    <ChevronDown
       class="block shrink-0 w-4 h-4 text-gray-500 transition-transform"
       :class="{
         'transform rotate-180': props.open,

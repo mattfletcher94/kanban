@@ -1,17 +1,12 @@
 <script lang="ts" setup>
+import { X, Folder } from 'lucide-vue-next'
 import { POSITION, useToast } from 'vue-toastification'
 import { z } from 'zod'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import IconClose from '../Icons/IconClose.vue'
-import IconFolder from '../Icons/IconFolder.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
 import type { ImportSchema } from '@/stores/boards'
 import { BoardSchema, CardSchema, ColumnSchema, LabelSchema, useBoardsStore } from '@/stores/boards'
+import { Button, FormGroup, Modal, ModalHeader, ModalFooter } from '@/lucidui'
 
 const props = defineProps<{
   open: boolean
@@ -148,7 +143,7 @@ watch(
             type="button"
             @click="onClose()"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -166,7 +161,7 @@ watch(
               color="secondary"
               @click="handleSelectFile"
             >
-              <IconFolder class="w-4 h-4" />
+              <Folder class="w-4 h-4" />
               Select file
             </Button>
           </template>

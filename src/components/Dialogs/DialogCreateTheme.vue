@@ -1,19 +1,11 @@
 <script lang="ts" setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as zod from 'zod'
+import { X, Folder } from 'lucide-vue-next'
 import { watch } from 'vue'
 import { useToast } from 'vue-toastification'
-import type { Theme, ThemeCreate } from '../../stores/boards'
-import { useBoardsStore } from '../../stores/boards'
-import IconFolder from '../Icons/IconFolder.vue'
-import IconClose from '../Icons/IconClose.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
-import FormGroup from '@/lucidui/form/FormGroup.vue'
-import FormControlText from '@/lucidui/form/FormControlText.vue'
+import type { Theme } from '@/stores/boards'
+import { useBoardsStore } from '@/stores/boards'
+import { Button, FormGroup, FormControlText, Modal, ModalHeader, ModalFooter } from '@/lucidui'
+import { useCreateThemeForm } from '@/composables/useCreateThemeForm'
 
 const props = defineProps<{
   open: boolean
@@ -27,24 +19,16 @@ const emits = defineEmits<{
 const store = useBoardsStore()
 const toast = useToast()
 
-const form = useForm<ThemeCreate>({
+const form = useCreateThemeForm({
   initialValues: {
     title: '',
     image: '',
     thumbnail: '',
   },
-  validationSchema: toTypedSchema(zod.object({
-    title: zod.string().min(1, 'Title is required'),
-    image: zod.string().min(1, 'Image is required'),
-    thumbnail: zod.string(),
-  })),
 })
 
-const title = form.useFieldModel('title')
-const image = form.useFieldModel('image')
-
 const onSubmit = form.handleSubmit(async (values, actions) => {
-  const response = await window.api.images.upload(image.value)
+  const response = await window.api.images.upload(form.values.image.value)
   const theme = store.createTheme({
     ...values,
     image: response.path,
@@ -62,7 +46,7 @@ const handleSelectImage = async () => {
     return
   }
   if (result && result.base64)
-    image.value = result.base64
+    form.values.image.value = result.base64
 }
 
 watch(() => [props.open], () => {
@@ -98,7 +82,7 @@ watch(() => [props.open], () => {
             type="button"
             @click="emits('close')"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>
@@ -112,14 +96,14 @@ watch(() => [props.open], () => {
           <template #control="{ id }">
             <FormControlText
               :id="id"
-              :value="title"
+              :value="form.values.title.value"
               type="text"
               placeholder="Enter title..."
-              @input="(value) => title = value"
+              @input="(value) => form.values.title.value = value"
             />
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.title" #error>
-            {{ form.errors.value.title }}
+          <template v-if="form.errorBag.value.title?.[0]" #error>
+            {{ form.errorBag.value.title?.[0] }}
           </template>
         </FormGroup>
         <FormGroup class="mt-6">
@@ -133,22 +117,22 @@ watch(() => [props.open], () => {
               color="secondary"
               @click="handleSelectImage()"
             >
-              <IconFolder class="w-4 h-4" />
+              <Folder class="w-4 h-4" />
               Select image
             </Button>
           </template>
-          <template v-if="form.submitCount.value > 0 && form.errors.value.image" #error>
-            {{ form.errors.value.image }}
+          <template  v-if="form.errorBag.value.image?.[0]" #error>
+            {{ form.errorBag.value.image?.[0] }}
           </template>
         </FormGroup>
         <div
-          v-if="image"
+          v-if="form.values.image.value"
           class="relative block mt-4"
         >
           <img
             alt="Image preview"
             class="relative block w-full h-[210px] object-cover object-center rounded-lg"
-            :src="image"
+            :src="form.values.image.value"
           >
           <div class="flex items-center justify-end mt-2">
             <Button
@@ -156,7 +140,7 @@ watch(() => [props.open], () => {
               color="danger"
               size="sm"
               class="absolute bottom-4 left-4 right-4"
-              @click="() => image = ''"
+              @click="() => form.values.image.value = ''"
             >
               Remove image
             </Button>

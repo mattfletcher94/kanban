@@ -42,7 +42,7 @@ const className = computed(() => {
 
 function handleInput(emit: 'input' | 'change' | 'blur' | 'focus', e: Event) {
   const value = (e.target as HTMLInputElement)?.value ?? ''
-  // @ts-expect-error emit is a string
+  // @ts-ignore Seems to be an error in Vue
   emits(emit, value)
 }
 

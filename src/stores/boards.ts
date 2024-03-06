@@ -28,7 +28,46 @@ export const CardSchema = z.object({
   dateUpdated: z.string(),
 })
 
+export const CardCreateSchema = z.object({
+  columnId: z.string(),
+  labelIds: z.array(z.string()).default([]),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional().default(''),
+  links: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    url: z.string(),
+  })).optional().default([]),
+  todos: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    completed: z.boolean(),
+  })).optional().default([]),
+  order: z.number().optional().default(0),
+})
+
+export const CardUpdateSchema = z.object({
+  id: z.string(),
+  columnId: z.string(),
+  labelIds: z.array(z.string()).optional(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  links: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    url: z.string(),
+  })).optional(),
+  todos: z.array(z.object({
+    id: z.string(),
+    description: z.string(),
+    completed: z.boolean(),
+  })).optional(),
+  order: z.number().optional(),
+})
+
 export type Card = z.infer<typeof CardSchema>
+export type CardCreate = z.infer<typeof CardCreateSchema>
+export type CardUpdate = z.infer<typeof CardUpdateSchema>
 
 export const ColumnSchema = z.object({
   id: z.string(),
@@ -39,7 +78,22 @@ export const ColumnSchema = z.object({
   dateUpdated: z.string(),
 })
 
+export const ColumnCreateSchema = z.object({
+  boardId: z.string(),
+  title: z.string().min(1, 'Title is required'),
+  order: z.number().optional().default(0),
+})
+
+export const ColumnUpdateSchema = z.object({
+  id: z.string(),
+  boardId: z.string(),
+  title: z.string().min(1, 'Title is required'),
+  order: z.number().optional().default(0),
+})
+
 export type Column = z.infer<typeof ColumnSchema>
+export type ColumnCreate = z.infer<typeof ColumnCreateSchema>
+export type ColumnUpdate = z.infer<typeof ColumnUpdateSchema>
 
 export const BoardSchema = z.object({
   id: z.string(),
@@ -56,7 +110,34 @@ export const BoardSchema = z.object({
   dateUpdated: z.string(),
 })
 
+export const BoardCreateSchema = z.object({
+  themeId: z.string().min(1, 'Theme is required'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional().default(''),
+  viewSettings: z.object({
+    hideLabels: z.boolean().optional().default(false),
+    hideDescription: z.boolean().optional().default(false),
+    hideLinks: z.boolean().optional().default(false),
+    hideTodos: z.boolean().optional().default(false),
+  }).optional().default({}),
+})
+
+export const BoardUpdateShema = z.object({
+  id: z.string(),
+  themeId: z.string().min(1, 'Theme is required'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional().default(''),
+  viewSettings: z.object({
+    hideLabels: z.boolean().optional().default(false),
+    hideDescription: z.boolean().optional().default(false),
+    hideLinks: z.boolean().optional().default(false),
+    hideTodos: z.boolean().optional().default(false),
+  }).optional().default({}),
+})
+
 export type Board = z.infer<typeof BoardSchema>
+export type BoardCreate = z.infer<typeof BoardCreateSchema>
+export type BoardUpdate = z.infer<typeof BoardUpdateShema>
 
 export const ThemeSchema = z.object({
   id: z.string(),
@@ -68,7 +149,14 @@ export const ThemeSchema = z.object({
   dateUpdated: z.string().optional(),
 })
 
+export const ThemeCreateSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  image: z.string().min(1, 'Image is required'),
+  thumbnail: z.string().optional().default(''),
+})
+
 export type Theme = z.infer<typeof ThemeSchema>
+export type ThemeCreate = z.infer<typeof ThemeCreateSchema>
 
 export const LabelSchema = z.object({
   id: z.string(),
@@ -90,23 +178,9 @@ export type Import = z.infer<typeof ImportSchema>
 
 export type Label = z.infer<typeof LabelSchema>
 
-export type BoardCreate = Omit<Board, 'id' | 'dateCreated' | 'dateUpdated'>
-
-export type BoardUpdate = Partial<Omit<Board, 'id' | 'dateCreated' | 'dateUpdated'>> & Pick<Board, 'id'>
-
-export type ColumnCreate = Omit<Column, 'id' | 'dateCreated' | 'dateUpdated'>
-
-export type ColumnUpdate = Partial<Omit<Column, 'id' | 'dateCreated' | 'dateUpdated'>> & Pick<Column, 'id' | 'boardId'>
-
-export type CardCreate = Omit<Card, 'id' | 'dateCreated' | 'dateUpdated'>
-
-export type CardUpdate = Partial<Omit<Card, 'id' | 'dateCreated' | 'dateUpdated'>> & Pick<Card, 'id' | 'columnId'>
-
 export type LabelCreate = Omit<Label, 'id' | 'dateCreated' | 'dateUpdated'>
 
 export type LabelUpdate = Partial<Omit<Label, 'id' | 'dateCreated' | 'dateUpdated'>> & Pick<Label, 'id'>
-
-export type ThemeCreate = Omit<Theme, 'id' | 'isCustom'>
 
 export type ThemeUpdate = Partial<Omit<Theme, 'id'>> & Pick<Theme, 'id' | 'isCustom'>
 

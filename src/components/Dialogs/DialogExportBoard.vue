@@ -1,11 +1,9 @@
 <script lang="ts" setup>
+import { X } from 'lucide-vue-next'
 import { POSITION, useToast } from 'vue-toastification'
 import { useBoardsStore } from '../../stores/boards'
-import IconClose from '../Icons/IconClose.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
+import { Button, FormGroup, FormControlText, Modal, ModalHeader, ModalFooter } from '@/lucidui'
+
 
 const props = defineProps<{
   boardId: string
@@ -84,7 +82,7 @@ const onClose = () => {
             type="button"
             @click="onClose()"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>

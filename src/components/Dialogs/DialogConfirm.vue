@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import IconClose from '../Icons/IconClose.vue'
-import Modal from '@/lucidui/modals/Modal.vue'
-import ModalHeader from '@/lucidui/modals/ModalHeader.vue'
-import ModalFooter from '@/lucidui/modals/ModalFooter.vue'
-import Button from '@/lucidui/buttons/Button.vue'
+import { X } from 'lucide-vue-next'
+import { Modal, ModalHeader, ModalFooter, Button } from '@/lucidui'
 
 const props = defineProps<{
   open: boolean
@@ -45,7 +42,7 @@ const onCancel = () => {
             type="button"
             @click="onCancel()"
           >
-            <IconClose class="w-5 h-5" />
+            <X class="w-5 h-5" />
           </Button>
         </template>
       </ModalHeader>

@@ -4,9 +4,7 @@
   generic="T extends { id: string | number }, U extends string | number"
 >
 import { computed, useSlots } from 'vue'
-import Dropdown from '@/lucidui/dropdowns/Dropdown.vue'
-import DropdownOption from '@/lucidui/dropdowns/DropdownOption.vue'
-import FormControlSelectButton from '@/lucidui/form/FormControlSelectButton.vue'
+import { Dropdown, DropdownOption, FormControlSelectButton } from '@/lucidui'
 
 const props = withDefaults(defineProps<{
   id?: string
