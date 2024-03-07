@@ -2,11 +2,13 @@
 import Sortable from 'sortablejs'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, Plus, Settings2, GripVertical, Trash, ExternalLink, Download, Upload, Pencil } from 'lucide-vue-next'
+import { ChevronDown, Plus, Settings2, GripVertical, Trash, ExternalLink, Download, Upload, Pencil, Search } from 'lucide-vue-next'
 import { Button, Dropdown, DropdownOption, FormControlCheckbox } from '@/lucidui'
 import { useBoardsStore } from '@/stores/boards'
+import { watchDebounced } from '@vueuse/core'
 import type { BoardCreate, BoardUpdate, Card, CardCreate, CardUpdate, Column, ColumnCreate, ColumnUpdate } from '@/stores/boards'
 import { POSITION, useToast } from 'vue-toastification'
+import { workerService } from '@/worker/client'
 import DialogCreateBoard from '../components/Dialogs/DialogCreateBoard.vue'
 import DialogCreateColumn from '../components/Dialogs/DialogCreateColumn.vue'
 import DialogCreateCardMinimal from '../components/Dialogs/DialogCreateCardMinimal.vue'
@@ -17,6 +19,8 @@ import DialogEditColumn from '../components/Dialogs/DialogEditColumn.vue'
 import DialogConfirm from '@/components/Dialogs/DialogConfirm.vue'
 import DialogExportBoard from '@/components/Dialogs/DialogExportBoard.vue'
 import DialogImportBoard from '@/components/Dialogs/DialogImportBoard.vue'
+import FormControlText from '@/lucidui/form/FormControlText.vue'
+import CardComponent from '@/components/Card.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,6 +33,9 @@ const columns = computed(() => boardsStore.getBoardColumns(board.value?.id || ''
 
 const columnRef = ref<HTMLElement>()
 const cardRefs = ref<HTMLElement[]>([])
+const searchValue = ref('')
+const isSearchLoading = ref(false)
+const filteredCards = ref<{ id: string, score: number }[]>([])
 const isCreateDialogOpen = ref(false)
 const isEditBoardDialogOpen = ref(false)
 const isCreateColumnDialogOpen = ref(false)
@@ -37,7 +44,6 @@ const isImportDialogOpen = ref(false)
 const editColumnCandidate = ref<Column | null>(null)
 const deleteColumnCandidate = ref<Column | null>(null)
 const createCardColumnCandidate = ref<string | null>(null)
-
 const editCardCandidate = ref<Card | null>(null)
 
 const columnsSortableInstance = ref<Sortable>()
@@ -221,26 +227,6 @@ const initSortableColumns = () => {
   })
 }
 
-onMounted(() => {
-  if (route.params.boardId) {
-    boardsStore.selectedBoardId = route.params.boardId as string
-    nextTick().then(() => {
-      initSortableColumns()
-      initSortableCards()
-    })
-    return
-  }
-
-  const selectedBoard = boardsStore.getBoardById(boardsStore.selectedBoardId)
-  if (selectedBoard) {
-    router.push(`/boards/${selectedBoard.id}`)
-    return
-  }
-
-  const nextBoard = boardsStore.boards[0] || null
-  router.push(`/boards/${nextBoard?.id}`)
-})
-
 const handleToggleTodoCompleted = (cardId: string, todoId: string) => {
   const card = boardsStore.getCardById(cardId)
   if (!card)
@@ -259,6 +245,53 @@ const handleToggleTodoCompleted = (cardId: string, todoId: string) => {
     todos: updatedTodos,
   })
 }
+
+const resolveColumnCards = (columnId: string) => {
+  const cards = boardsStore.getColumnCards(columnId);
+  return cards;
+}
+
+watchDebounced(() => searchValue.value, async () => {
+  if (!searchValue.value.trim()) {
+    filteredCards.value = []
+    return;
+  }
+  const result = await workerService.query('search', {
+    query: searchValue.value,
+    data: boardsStore.getBoardCards(boardsStore.selectedBoardId).map((card) => {
+      const labels = boardsStore.getCardLabels(card.id).map(label => label.title).join(' ')
+      return {
+        id: card.id,
+        title: card.title,
+        description: `${labels} ${card.description}`
+      }
+    })
+  })
+  filteredCards.value = result
+}, {
+  debounce: 300,
+})
+
+onMounted(async () => {
+  if (route.params.boardId) {
+    boardsStore.selectedBoardId = route.params.boardId as string
+    nextTick().then(() => {
+      initSortableColumns()
+      initSortableCards()
+    })
+    return
+  }
+
+  const selectedBoard = boardsStore.getBoardById(boardsStore.selectedBoardId)
+  if (selectedBoard) {
+    router.push(`/boards/${selectedBoard.id}`)
+    return
+  }
+
+  const nextBoard = boardsStore.boards[0] || null
+  router.push(`/boards/${nextBoard?.id}`)
+
+})
 
 onBeforeUnmount(() => {
   columnsSortableInstance.value?.destroy()
@@ -340,7 +373,18 @@ watch(() => columns.value.length, () => {
             </template>
           </Dropdown>
           <div class="ml-auto flex items-center gap-2">
+            <!-- Search bar -->
+            <div class="relative shirnk w-full max-w-[280px]">
+              <FormControlText
+                :value="searchValue"
+                class="w-full h-10 pl-10"
+                placeholder="Search..."
+                @input="(value) => searchValue = value"
+              />
+              <Search class="absolute top-1/2 -translate-y-1/2 left-3 w-4 h-4" />
+            </div>
             <Button
+              class="shrink-0"
               color="secondary"
               title="Add Column"
               @click="isCreateColumnDialogOpen = true"
@@ -349,6 +393,7 @@ watch(() => columns.value.length, () => {
               <Plus class="w-4 h-4" />
             </Button>
             <Button
+              class="shrink-0"
               color="secondary"
               @click="isEditBoardDialogOpen = true"
             >
@@ -356,6 +401,7 @@ watch(() => columns.value.length, () => {
               <Settings2 class="w-4 h-4" />
             </Button>
             <Button
+              class="shrink-0"
               color="secondary"
               @click="isExportDialogOpen = true"
             >
@@ -363,6 +409,7 @@ watch(() => columns.value.length, () => {
               <Download class="w-4 h-4" />
             </Button>
             <Button
+              class="shrink-0"
               color="secondary"
               @click="isImportDialogOpen = true"
             >
@@ -476,102 +523,23 @@ watch(() => columns.value.length, () => {
                   >
 
                     <!-- Card -->
-                    <button
+                    <CardComponent 
                       v-for="card in boardsStore.getColumnCards(column.id)"
-                      :id="card.id"
                       :key="card.id"
-                      :data-card-id="card.id"
-                      class="board__columns__column__cards__card rounded-lg relative p-4 bg-white shadow-sm text-slate-700 outline-2 outline-dashed outline-transparent cursor-grab text-left"
-                      @click="() => editCardCandidate = card"
-                    >
-
-                      <!-- Card title -->
-                      <div class="flex w-full items-start justify-start font-medium gap-4">
-                        <div class="min-w-0">
-                          <h4
-                            :key="card.title"
-                            class="min-w-0 mt-[3px] text-base font-bold"
-                            v-html="card.title"
-                          />
-                        </div>
-                      </div>
-
-                      <!-- Card Labels -->
-                      <div
-                        v-if="card.labelIds && card.labelIds.length && board.viewSettings?.hideLabels !== true"
-                        class="flex flex-wrap gap-2 w-full items-center mt-2"
-                        name="vue-list"
-                        tag="div"
-                      >
-                        <CardLabel
-                          v-for="label in boardsStore.getCardLabels(card.id)"
-                          :key="label.id"
-                          :color="label.color"
-                          :title="label.title"
-                        >
-                          {{ label.title }}
-                        </CardLabel>
-                      </div>
-
-                      <!-- Card body -->
-                      <div class="flex flex-col gap-4 mt-4">
-                        <!-- Card description -->
-                        <div
-                          v-if="card.description && board.viewSettings?.hideDescription !== true"
-                        >
-                          <div
-                            class="prose-card--sm line-clamp-6"
-                            v-html="card.description"
-                          />
-                        </div>
-
-                        <ul
-                          v-if="card.todos && card.todos.length && board.viewSettings?.hideTodos !== true"
-                          ref="todosList"
-                          class="flex flex-col divide-y divide-gray-200 w-full rounded-lg border border-gray-200 bg-slate-50 overflow-hidden max-h-[300px] overflow-x-hidden overflow-y-auto"
-                        >
-                          <li
-                            v-for="(todo) in card.todos"
-                            :key="todo.id"
-                            class="flex items-center"
-                            @click="(e) => e.stopPropagation()"
-                          >
-                            <div class="w-full">
-                              <FormControlCheckbox
-                                class="p-2 w-full hover:bg-primary-50 transition-colors"
-                                size="sm"
-                                :checked="todo.completed"
-                                @change="(value) => handleToggleTodoCompleted(card.id, todo.id)"
-                              >
-                                <span :class="{ 'line-through': todo.completed }">
-                                  {{ todo.description }}
-                                </span>
-                              </FormControlCheckbox>
-                            </div>
-                          </li>
-                        </ul>
-
-                        <!-- Card links -->
-                        <div
-                          v-if="card.links && card.links.length > 0 && board.viewSettings?.hideLinks !== true"
-                          class="flex flex-wrap gap-2 w-full"
-                        >
-                          <Button
-                            v-for="link in card.links"
-                            :key="link.id"
-                            as="a"
-                            size="sm"
-                            color="secondary"
-                            :href="link.url"
-                            target="_blank"
-                          >
-                            <ExternalLink class="w-4 h-4" />
-                            {{ link.name }}
-                          </Button>
-                        </div>
-                      </div>
-                    </button>
-
+                      class="board__columns__column__cards__card"
+                      :class="{
+                        'opacity-40': filteredCards.length > 0 && !filteredCards.find(c => c.id === card.id),
+                        'outline-pink-500': filteredCards.find(c => c.id === card.id)
+                      }"
+                      :card="card"
+                      :labels="boardsStore.getCardLabels(card.id)"
+                      :hide-labels="board.viewSettings?.hideLabels"
+                      :hide-description="board.viewSettings?.hideDescription"
+                      :hide-todos="board.viewSettings?.hideTodos"
+                      :hide-links="board.viewSettings?.hideLinks"
+                      @click="editCardCandidate = card"
+                      @toggle-todo-completed="(cardId, todoId) => handleToggleTodoCompleted(cardId, todoId)"
+                    />
                   </div>
                   <div class="block w-full px-4 pb-4">
                     <Button
